@@ -48,23 +48,38 @@ function adminGetState() {
     links: links.map(function (l) { delete l._row; return l; }),
     requests: groups,
     rules: getRules_(),
-    calendars: CalendarApp.getAllCalendars().map(function (c) { return { id: c.getId(), name: c.getName() }; }),
   };
 }
 
-// Grid for a (possibly unsaved) link: final symbol, auto symbol and event details.
-function adminGetGrid(draft) {
+function adminListCalendars() {
   assertOwner_();
-  var link = normalizeLink_(draft);
-  var r = computeLink_(link, true);
-  var timed = r.events.map(function (e, i) { e.i = i; return e; });
-  return {
-    events: r.events,
-    slots: r.slots.map(function (s, i) {
-      var ev = timed.filter(function (e) { return e.start < s.end && s.start < e.end; }).map(function (e) { return e.i; });
-      return { s: s.start, d: s.date, y: r.symbols[i], a: r.auto[i], ev: ev };
-    }),
+  return CalendarApp.getAllCalendars().map(function (c) { return { id: c.getId(), name: c.getName() }; });
+}
+
+// Events (with details) and pending holds for [fromDate, toDate], used by the
+// editor to compute symbols in the browser. Cached for 5 minutes unless force.
+var CAL_CACHE_SEC = 300;
+
+function adminGetCalendarData(fromDate, toDate, force) {
+  assertOwner_();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || !/^\d{4}-\d{2}-\d{2}$/.test(toDate)) throw new Error('期間が正しくありません');
+  var from = Slots.jstMidnight(fromDate);
+  var to = Slots.jstMidnight(toDate) + DAY_MS;
+  var cache = CacheService.getScriptCache();
+  var key = 'cal:' + from + ':' + to + ':' + dataVersion_();
+  var hit = !force && cache.get(key);
+  if (hit) return JSON.parse(hit);
+  var events = loadEvents_(from, to, true).map(function (e) {
+    if (e.description && e.description.length > 500) e.description = e.description.slice(0, 500) + '…';
+    return e;
+  });
+  var out = {
+    from: from, to: to, loadedAt: Date.now(), events: events,
+    pending: activePending_(getRequests_(), Date.now()).map(function (r) { return { start: r.start, end: r.end }; }),
   };
+  var str = JSON.stringify(out);
+  if (str.length < 95000) cache.put(key, str, CAL_CACHE_SEC);
+  return out;
 }
 
 function normalizeLink_(d) {

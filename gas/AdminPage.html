@@ -5,11 +5,11 @@
 <meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root{--ink:#1d1d1f;--sub:#6e6e73;--line:#e5e5ea;--g:#22a447;--lg:#b8e35a;--o:#ff9f2e;--r:#ff6b5e;--y:#ffe14d}
+  :root{--ink:#1d1d1f;--sub:#6e6e73;--line:#e5e5ea;--g:#22a447;--lg:#b8e35a;--o:#ff9f2e;--r:#ff6b5e;--y:#ffe14d;--row:18px}
   *{box-sizing:border-box}
   body{margin:0;font-family:"Noto Sans JP",sans-serif;color:var(--ink);background:#fff;font-size:14px}
   h1,h2,h3,.round{font-family:"M PLUS Rounded 1c","Noto Sans JP",sans-serif}
-  header{padding:16px 16px 0;max-width:1100px;margin:0 auto}
+  header{padding:16px 16px 0;max-width:1200px;margin:0 auto}
   header h1{margin:0;font-size:22px;font-weight:800}
   header h1 .with{font-weight:500;color:#888;font-size:16px;margin:0 6px}
   header h1 .name{background:linear-gradient(transparent 60%,var(--y) 60%);padding:0 2px}
@@ -17,12 +17,12 @@
   nav{display:flex;gap:6px;margin-top:14px;border-bottom:2px solid var(--ink);flex-wrap:wrap}
   nav button{border:2px solid var(--ink);border-bottom:0;background:#fff;padding:8px 14px;border-radius:8px 8px 0 0;font:700 13px "M PLUS Rounded 1c";cursor:pointer;margin-bottom:-2px}
   nav button.on{background:var(--ink);color:#fff}
-  main{max-width:1100px;margin:0 auto;padding:16px 16px 80px}
+  main{max-width:1200px;margin:0 auto;padding:16px 16px 80px}
   .btn{display:inline-block;padding:7px 12px;border:2px solid var(--ink);border-radius:8px;background:#fff;font:700 13px "M PLUS Rounded 1c";cursor:pointer;box-shadow:0 2px 0 var(--ink);color:var(--ink)}
   .btn:active{transform:translateY(2px);box-shadow:none}
   .btn.go{background:var(--g);color:#fff}.btn.warn{background:var(--o);color:#fff}.btn.no{background:var(--r);color:#fff}.btn.dark{background:var(--ink);color:#fff}
   .btn.big{padding:11px 18px;font-size:15px}
-  .btn[disabled]{opacity:.5;cursor:wait}
+  .btn[disabled]{opacity:.5;cursor:default}
   .card{border:2px solid var(--ink);border-radius:10px;padding:14px;margin-bottom:14px}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .sp{flex:1}
@@ -41,25 +41,51 @@
   .days span{width:34px;text-align:center;border:1.5px solid #c7c7cc;border-radius:6px;padding:5px 0;cursor:pointer;user-select:none}
   .days span.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .editor{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
-  .editor .form{flex:1 1 280px;min-width:0}
-  .editor .gridwrap{flex:3 1 560px;min-width:0}
-  .grid{display:grid;gap:2px;user-select:none;touch-action:none}
-  .gh{text-align:center;font:700 12px "M PLUS Rounded 1c";padding:4px 0}
-  .gh small{display:block;font-size:10px;color:#888;font-weight:500}
-  .gt{font-size:10px;color:#999;text-align:right;padding-right:4px;line-height:22px}
-  .c{height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;position:relative;overflow:hidden;white-space:nowrap}
-  .c .ev{font-size:9px;font-weight:500;padding:0 2px;overflow:hidden;text-overflow:ellipsis}
-  .c.ov::after{content:"";position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:var(--ink);border:1px solid #fff}
+  .editor .form{flex:1 1 280px;min-width:0;max-width:360px}
+  .editor .calwrap{flex:3 1 600px;min-width:0}
+
+  /* symbol colors */
   .y-◎{background:var(--g);color:#fff}.y-○{background:var(--lg);color:#2c4a05}.y-△{background:var(--o);color:#fff}.y-×{background:var(--r);color:#fff}
   .legend{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
   .pill{display:inline-flex;gap:4px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;border:2px solid var(--ink)}
+
+  /* brushes: explicit colors so they never fall back to white */
   .brushes{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
-  .brush{padding:6px 10px;border-radius:6px;border:2px solid #c7c7cc;background:#fff;font-size:12px;font-weight:700;cursor:pointer}
-  .brush.on{border-color:var(--ink);box-shadow:0 2px 0 var(--ink)}
+  .brushes .brush{padding:7px 11px;border-radius:6px;border:2px solid #c7c7cc;font:700 13px "M PLUS Rounded 1c";cursor:pointer;background:#fff;color:var(--ink)}
+  .brushes .brush.b-◎{background:var(--g);color:#fff}
+  .brushes .brush.b-○{background:var(--lg);color:#2c4a05}
+  .brushes .brush.b-△{background:var(--o);color:#fff}
+  .brushes .brush.b-×{background:var(--r);color:#fff}
+  .brushes .brush.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--ink)}
+
+  /* Google Calendar-like week view */
+  .pager{display:flex;gap:8px;align-items:center;margin:6px 0}
+  .pager .round{flex:1;text-align:center;font-weight:700}
+  .cal{border:1.5px solid #d2d2d7;border-radius:8px;overflow:hidden}
+  .cal-head{display:grid;border-bottom:1.5px solid #d2d2d7;background:#fafafa}
+  .cal-head .dh{text-align:center;padding:6px 2px;font:700 12px "M PLUS Rounded 1c";border-left:1px solid var(--line)}
+  .cal-head .dh small{display:block;font-size:10px;color:#888;font-weight:500}
+  .cal-head .dh.off{color:#bbb}
+  .cal-head .allday{display:block;margin-top:3px;font:500 10px "Noto Sans JP";background:#fde2df;border-radius:3px;padding:1px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+  .cal-body{display:grid;max-height:62vh;overflow-y:auto;position:relative;user-select:none;-webkit-user-select:none}
+  .gutter div{height:calc(var(--row)*2);font-size:10px;color:#999;text-align:right;padding-right:4px;transform:translateY(-6px)}
+  .day{position:relative;border-left:1px solid var(--line);touch-action:none}
+  .cell{height:var(--row);border-bottom:1px solid #f0f0f2;display:flex;align-items:center;padding-left:3px;font-size:10px;font-weight:700}
+  .cell:nth-child(2n){border-bottom-color:#e2e2e6}
+  .cell.out{background:#fff;color:transparent}
+  .cell.paint{cursor:crosshair}
+  .cell.y-◎,.cell.y-○,.cell.y-△,.cell.y-×{opacity:.85}
+  .cell.ov{box-shadow:inset 3px 0 0 var(--ink)}
+  .cell.ov::after{content:"●";font-size:8px;margin-left:2px}
+  .day.off .cell{background:repeating-linear-gradient(45deg,#f6f6f6 0 4px,#ececec 4px 8px)!important;color:transparent}
+  .ev{position:absolute;left:34%;right:2px;border-radius:4px;background:#fff;border:1px solid #c7c7cc;border-left:4px solid var(--r);padding:1px 4px;font-size:10px;line-height:1.25;overflow:hidden;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .ev.soft{border-left-color:var(--o)}
+  .ev b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .now{position:absolute;left:0;right:0;height:2px;background:#e8433a;pointer-events:none;z-index:2}
+
   .detail{border:2px solid var(--ink);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13px;background:#fffdf2}
   .detail .e{padding:6px 0;border-bottom:1px solid var(--line)}
   .detail .e:last-child{border:0}
-  .pager{display:flex;gap:8px;align-items:center;margin:6px 0}
   table.rules{border-collapse:collapse;width:100%}
   table.rules td,table.rules th{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left}
   .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;font-weight:700;display:none;z-index:10}
@@ -89,11 +115,14 @@ var PARAMS = JSON.parse(<?= params ?>);
 var SYMS = ['◎', '○', '△', '×'];
 var LABEL = { '◎': '空いています', '○': '空き・前後に予定', '△': '相談可・未定', '×': '不可' };
 var WD = ['月', '火', '水', '木', '金', '土', '日'];
+var ROW_MIN = 30;        // editor rows are always 30 minutes, like Google Calendar
 var S = null;            // server state
 var draft = null;        // link being edited
-var grid = null;         // { events, slots }
+var calData = null;      // cached { from, to, loadedAt, events, pending }
+var symbolBy = {};       // auto symbol by slot start (guest-visible slots only)
+var weeks = [], page = 0;
 var brush = 'info';
-var page = 0;            // week page in editor
+var DAY = 86400000;
 
 function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -110,6 +139,9 @@ function inputToMin(v) { var p = v.split(':').map(Number); return p[0] * 60 + p[
 function msToMinOfDay(ms) { return Math.round((ms - Slots.jstMidnight(Slots.jstDateString(ms))) / 60000); }
 function guestUrl(l) { return S.guestBase + '?l=' + l.id; }
 function busy(btn, on) { if (btn) btn.disabled = on; }
+function todayStr() { return Slots.jstDateString(Date.now()); }
+function addDays(date, n) { return Slots.jstDateString(Slots.jstMidnight(date) + n * DAY); }
+function weekdayIndex(date) { return (new Date(Slots.jstMidnight(date) + Slots.JST_OFFSET_MS).getUTCDay() + 6) % 7; } // Mon = 0
 
 function showTab(name) {
   [].forEach.call(document.querySelectorAll('#nav button'), function (b) { b.classList.toggle('on', b.dataset.tab === name); });
@@ -193,7 +225,7 @@ $('tab-links').onclick = function (e) {
   var link = card && S.links.filter(function (l) { return l.id === card.dataset.link; })[0];
   var reqEl = b.closest('[data-req]');
   if (act === 'new') { newDraft(); showTab('edit'); renderEditor(); }
-  if (act === 'edit') { draft = JSON.parse(JSON.stringify(link)); page = 0; showTab('edit'); renderEditor(); }
+  if (act === 'edit') { draft = JSON.parse(JSON.stringify(link)); page = -1; showTab('edit'); renderEditor(); }
   if (act === 'copy') copyText(card.querySelector('.url'));
   if (act === 'toggle') { busy(b, true); call('adminSetActive', link.id, !link.active).then(load); }
   if (act === 'approve') {
@@ -206,6 +238,7 @@ $('tab-links').onclick = function (e) {
     busy(b, true);
     call('adminApprove', x.id, s, en).then(function (res) {
       toast(res.ok ? (res.already ? 'すでに処理済みです' : '承認しました：' + res.label) : res.error);
+      calData = null; // approvals change the calendar
       return load();
     });
   }
@@ -214,7 +247,7 @@ $('tab-links').onclick = function (e) {
   if (act === 'send-reply') {
     busy(b, true);
     call('adminReply', reqEl.dataset.req, b.dataset.type, reqEl.querySelector('.replybox textarea').value)
-      .then(function () { toast('送信しました'); return load(); }, function () { busy(b, false); });
+      .then(function () { toast('送信しました'); calData = null; return load(); }, function () { busy(b, false); });
   }
 };
 
@@ -226,14 +259,11 @@ function copyText(input) {
 }
 
 // ================= リンク作成・編集 =================
-function todayStr() { return Slots.jstDateString(Date.now()); }
-function addDays(date, n) { return Slots.jstDateString(Slots.jstMidnight(date) + n * 86400000); }
-
 function newDraft() {
   var d = S.defaults;
   draft = { id: '', name: '', startDate: todayStr(), endDate: addDays(todayStr(), 13), dayStart: d.dayStart, dayEnd: d.dayEnd,
     weekdays: d.weekdays, slotMinutes: d.slotMinutes, overrides: {}, active: true };
-  grid = null; page = 0;
+  page = -1;
 }
 
 function timeOptions(sel) {
@@ -242,32 +272,39 @@ function timeOptions(sel) {
   return h;
 }
 
+function brushButton(key, label, cls) {
+  return '<button type="button" class="brush ' + (cls || '') + (brush === key ? ' on' : '') + '" data-b="' + key + '">' + label + '</button>';
+}
+
 function renderEditor() {
   var d = draft;
   var h = '<div class="editor"><div class="form card">'
     + '<h3 style="margin:0 0 4px">1. 誰に送る？</h3>'
     + '<label class="f">相手の名前（相手のページに表示）<input id="f-name" style="width:100%" value="' + esc(d.name) + '" placeholder="山田さん（家庭教師）"></label>'
-    + '<h3 style="margin:16px 0 4px">2. 見せる範囲</h3>'
+    + '<h3 style="margin:16px 0 4px">2. 相手に見せる範囲</h3>'
     + '<label class="f">期間<div class="row"><input type="date" id="f-start" value="' + d.startDate + '">〜<input type="date" id="f-end" value="' + d.endDate + '"></div></label>'
-    + '<label class="f">時間帯<div class="row"><select id="f-ds">' + timeOptions(d.dayStart) + '</select>〜<select id="f-de">' + timeOptions(d.dayEnd) + '</select></div></label>'
+    + '<label class="f">相手に見せる時間帯<div class="row"><select id="f-ds">' + timeOptions(d.dayStart) + '</select>〜<select id="f-de">' + timeOptions(d.dayEnd) + '</select></div></label>'
     + '<label class="f">曜日<div class="days" id="f-wd">' + WD.map(function (w, i) { return '<span data-i="' + i + '" class="' + (d.weekdays[i] === '1' ? 'on' : '') + '">' + w + '</span>'; }).join('') + '</div></label>'
-    + '<label class="f">枠の長さ<select id="f-slot"><option value="30"' + (d.slotMinutes === 30 ? ' selected' : '') + '>30分</option><option value="60"' + (d.slotMinutes === 60 ? ' selected' : '') + '>1時間</option></select></label>'
+    + '<label class="f">相手が選べる枠の長さ<select id="f-slot"><option value="30"' + (d.slotMinutes === 30 ? ' selected' : '') + '>30分</option><option value="60"' + (d.slotMinutes === 60 ? ' selected' : '') + '>1時間</option></select></label>'
     + '<h3 style="margin:16px 0 4px">3. 手で上書き</h3>'
     + '<div class="brushes" id="brushes">'
-    + '<button class="brush' + (brush === 'info' ? ' on' : '') + '" data-b="info">🔍 予定を見る</button>'
-    + '<button class="brush y-×' + (brush === '×' ? ' on' : '') + '" data-b="×">×でブロック</button>'
-    + '<button class="brush y-△' + (brush === '△' ? ' on' : '') + '" data-b="△">△にする</button>'
-    + '<button class="brush y-◎' + (brush === '◎' ? ' on' : '') + '" data-b="◎">◎にする</button>'
-    + '<button class="brush' + (brush === 'reset' ? ' on' : '') + '" data-b="reset">自動に戻す</button></div>'
-    + '<div class="muted">ブラシを選んで枠をドラッグ。●印＝手で変えた枠。</div>'
+    + brushButton('info', '🔍 予定を見る')
+    + brushButton('×', '× ブロック', 'b-×')
+    + brushButton('△', '△ 相談可', 'b-△')
+    + brushButton('○', '○ 空き(タイト)', 'b-○')
+    + brushButton('◎', '◎ 空き', 'b-◎')
+    + brushButton('reset', '自動に戻す') + '</div>'
+    + '<div class="muted">ブラシを選んで、色のついた枠をドラッグ。左に黒い線と●＝手で変えた枠。白い時間帯は相手に見せない時間です。</div>'
     + '<div style="margin-top:16px"><button class="btn go big" id="save" style="width:100%">' + (d.id ? '保存する' : 'リンクを発行する') + '</button></div>'
     + (d.id ? '<input class="url" readonly id="f-url" value="' + esc(guestUrl(d)) + '"><div class="row" style="margin-top:6px"><button class="btn" id="copy-url">リンクをコピー</button></div>' : '')
-    + '</div><div class="gridwrap"><div class="legend">' + SYMS.map(function (s) { return '<span class="pill y-' + s + '">' + s + ' ' + LABEL[s] + '</span>'; }).join('') + '</div>'
-    + '<div class="pager"><button class="btn" id="prev">‹ 前の週</button><span id="range-label" class="round"></span><button class="btn" id="next">次の週 ›</button></div>'
-    + '<div id="grid" class="grid"><div class="loading">カレンダーを読み込み中…</div></div><div id="detail"></div></div></div>';
+    + '</div><div class="calwrap"><div class="legend">' + SYMS.map(function (s) { return '<span class="pill y-' + s + '">' + s + ' ' + LABEL[s] + '</span>'; }).join('') + '</div>'
+    + '<div class="pager"><button class="btn" id="prev">‹ 前の週</button><span id="range-label" class="round"></span><button class="btn" id="next">次の週 ›</button>'
+    + '<button class="btn" id="reload" title="Googleカレンダーから読み直す">↻ 最新にする</button></div>'
+    + '<div id="cal" class="cal"><div class="loading" style="padding:20px">カレンダーを読み込み中…</div></div>'
+    + '<div class="muted" id="loaded-at" style="margin-top:4px"></div><div id="detail"></div></div></div>';
   $('tab-edit').innerHTML = h;
   bindEditor();
-  refreshGrid();
+  ensureData(false).then(recompute);
 }
 
 function readForm() {
@@ -279,120 +316,212 @@ function readForm() {
   draft.slotMinutes = Number($('f-slot').value);
 }
 
-var refreshTimer = null;
-function refreshGrid() {
-  clearTimeout(refreshTimer);
-  refreshTimer = setTimeout(function () {
-    $('grid').innerHTML = '<div class="loading">カレンダーを読み込み中…</div>';
-    call('adminGetGrid', draft).then(function (g) { grid = g; renderGrid(); }, function () { $('grid').innerHTML = '<div class="loading">読み込めませんでした。期間・時間帯を確認してください。</div>'; });
-  }, 300);
+// Calendar data is loaded once for a wide window and reused; symbols are computed here in the browser.
+function ensureData(force) {
+  var from = draft.startDate < todayStr() ? draft.startDate : todayStr();
+  var to = addDays(from, 70) > draft.endDate ? addDays(from, 70) : draft.endDate;
+  var fromMs = Slots.jstMidnight(draft.startDate), toMs = Slots.jstMidnight(draft.endDate) + DAY;
+  if (!force && calData && calData.from <= fromMs && calData.to >= toMs) return Promise.resolve();
+  if ($('cal')) $('cal').innerHTML = '<div class="loading" style="padding:20px">カレンダーを読み込み中…</div>';
+  return call('adminGetCalendarData', from, to, !!force).then(function (d) { calData = d; });
 }
 
-function dates() {
-  var seen = {}, out = [];
-  grid.slots.forEach(function (s) { if (!seen[s.d]) { seen[s.d] = 1; out.push(s.d); } });
-  return out;
+function recompute() {
+  if (!calData || !/^\d{4}-\d{2}-\d{2}$/.test(draft.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(draft.endDate) || draft.endDate < draft.startDate) {
+    $('cal').innerHTML = '<div class="loading" style="padding:20px">期間を確認してください。</div>';
+    return;
+  }
+  var slots = Slots.generateSlots(draft);
+  var auto = Slots.classify(slots, { events: calData.events, pending: calData.pending, overrides: {} });
+  var now = Date.now();
+  symbolBy = {};
+  slots.forEach(function (s, i) { symbolBy[s.start] = s.start < now ? '×' : auto[i]; });
+  // Monday-start weeks covering the period
+  weeks = [];
+  var first = Slots.jstMidnight(draft.startDate) - weekdayIndex(draft.startDate) * DAY;
+  for (var w = first; w <= Slots.jstMidnight(draft.endDate); w += 7 * DAY) weeks.push(Slots.jstDateString(w));
+  if (page < 0) { // jump to the week containing today (or the first week)
+    var t = Slots.jstMidnight(todayStr());
+    page = Math.max(0, weeks.findIndex(function (m) { var a = Slots.jstMidnight(m); return t >= a && t < a + 7 * DAY; }));
+  }
+  page = Math.min(Math.max(page, 0), weeks.length - 1);
+  renderWeek();
+  $('loaded-at').textContent = 'Googleカレンダー読み込み：' + new Date(calData.loadedAt).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' });
 }
 
-function renderGrid() {
-  var ds = dates();
-  var pages = Math.max(1, Math.ceil(ds.length / 7));
-  page = Math.min(page, pages - 1);
-  var shown = ds.slice(page * 7, page * 7 + 7);
-  $('range-label').textContent = shown.length ? shown[0].slice(5).replace('-', '/') + ' – ' + shown[shown.length - 1].slice(5).replace('-', '/') : '表示する日がありません';
-  $('prev').disabled = page === 0; $('next').disabled = page >= pages - 1;
-  var step = draft.slotMinutes;
-  var rows = []; for (var m = draft.dayStart; m + step <= draft.dayEnd; m += step) rows.push(m);
-  var by = {}; grid.slots.forEach(function (s, i) { by[s.s] = i; });
-  var g = $('grid');
-  g.style.gridTemplateColumns = '40px repeat(' + Math.max(shown.length, 1) + ',minmax(0,1fr))';
-  var h = '<div></div>' + shown.map(function (d) {
-    var dt = new Date(Slots.jstMidnight(d) + 9 * 3600000); return '<div class="gh">' + dt.getUTCDate() + '<small>' + '日月火水木金土'[dt.getUTCDay()] + '</small></div>';
-  }).join('');
-  rows.forEach(function (m) {
-    h += '<div class="gt">' + (m % 60 === 0 ? minToHHMM(m) : '') + '</div>';
-    shown.forEach(function (d) {
-      var start = Slots.jstMidnight(d) + m * 60000;
-      var i = by[start];
-      if (i === undefined) { h += '<div></div>'; return; }
-      var s = grid.slots[i];
-      var ov = Object.prototype.hasOwnProperty.call(draft.overrides, s.s);
-      var y = ov ? draft.overrides[s.s] : s.a;
-      var title = !ov && s.ev.length ? grid.events[s.ev[0]].title : '';
-      h += '<div class="c y-' + y + (ov ? ' ov' : '') + '" data-s="' + s.s + '">' + (title ? '<span class="ev">' + esc(title) + '</span>' : y) + '</div>';
+function symbolFor(start) {
+  if (Object.prototype.hasOwnProperty.call(draft.overrides, start)) return { y: draft.overrides[start], ov: true };
+  return symbolBy[start] ? { y: symbolBy[start], ov: false } : null;
+}
+
+// Guest-visible slot (start of its slot) containing the 30-min editor row at ms, or null.
+function slotStartAt(ms) {
+  var step = draft.slotMinutes * 60000;
+  var base = Slots.jstMidnight(Slots.jstDateString(ms)) + draft.dayStart * 60000;
+  var s = base + Math.floor((ms - base) / step) * step;
+  return symbolBy[s] ? s : null;
+}
+
+function renderWeek() {
+  var monday = weeks[page];
+  var days = []; for (var i = 0; i < 7; i++) days.push(addDays(monday, i));
+  $('range-label').textContent = monday.slice(5).replace('-', '/') + ' – ' + days[6].slice(5).replace('-', '/');
+  $('prev').disabled = page === 0; $('next').disabled = page >= weeks.length - 1;
+  var cols = '44px repeat(7,minmax(0,1fr))';
+  var inRange = function (d) { return d >= draft.startDate && d <= draft.endDate && draft.weekdays[weekdayIndex(d)] === '1'; };
+  var dayEvents = function (d) {
+    var a = Slots.jstMidnight(d), z = a + DAY;
+    return calData.events.map(function (e, i) { e.i = i; return e; }).filter(function (e) { return e.start < z && a < e.end; });
+  };
+  var head = '<div class="cal-head" style="grid-template-columns:' + cols + '"><div></div>' + days.map(function (d) {
+    var dt = new Date(Slots.jstMidnight(d) + Slots.JST_OFFSET_MS);
+    var allDay = dayEvents(d).filter(function (e) { return e.allDay; });
+    return '<div class="dh' + (inRange(d) ? '' : ' off') + '">' + dt.getUTCDate() + '<small>' + '日月火水木金土'[dt.getUTCDay()] + '</small>'
+      + allDay.map(function (e) { return '<span class="allday" data-ev="' + e.i + '">終日 ' + esc(e.title || '予定') + '</span>'; }).join('') + '</div>';
+  }).join('') + '</div>';
+  var rowPx = 18;
+  var body = '<div class="cal-body" id="calbody" style="grid-template-columns:' + cols + '"><div class="gutter">';
+  for (var hh = 0; hh < 24; hh++) body += '<div>' + (hh ? hh + ':00' : '') + '</div>';
+  body += '</div>';
+  var now = Date.now();
+  days.forEach(function (d) {
+    var a = Slots.jstMidnight(d);
+    body += '<div class="day' + (inRange(d) ? '' : ' off') + '" data-d="' + d + '">';
+    for (var m = 0; m < 1440; m += ROW_MIN) {
+      var ms = a + m * 60000;
+      var k = cellClass(ms);
+      body += '<div class="' + k.cls + '" data-ms="' + ms + '">' + k.text + '</div>';
+    }
+    dayEvents(d).filter(function (e) { return !e.allDay; }).forEach(function (e) {
+      var s = Math.max(e.start, a), z = Math.min(e.end, a + DAY);
+      var top = (s - a) / 60000 / ROW_MIN * rowPx, hgt = Math.max((z - s) / 60000 / ROW_MIN * rowPx - 1, 14);
+      body += '<div class="ev' + (e.kind === 'soft' ? ' soft' : '') + '" style="top:' + top + 'px;height:' + hgt + 'px"><b>' + esc(e.title || '（タイトルなし）') + '</b>'
+        + Slots.hhmm(e.start) + '–' + Slots.hhmm(e.end) + '</div>';
     });
+    if (now >= a && now < a + DAY) body += '<div class="now" style="top:' + ((now - a) / 60000 / ROW_MIN * rowPx) + 'px"></div>';
+    body += '</div>';
   });
-  g.innerHTML = h;
+  body += '</div>';
+  var keepScroll = $('calbody') ? $('calbody').scrollTop : null;
+  $('cal').innerHTML = head + body;
+  $('calbody').scrollTop = keepScroll !== null ? keepScroll : Math.max(0, (draft.dayStart / ROW_MIN - 2) * rowPx);
+  bindCalendar();
 }
 
-function showDetail(start) {
-  var s = grid.slots.filter(function (x) { return String(x.s) === String(start); })[0];
-  if (!s) return;
-  var range = Slots.formatRange({ start: s.s, end: s.s + draft.slotMinutes * 60000 });
-  var h = '<div class="detail"><b>' + esc(range) + '</b>　自動判定 ' + s.a;
-  if (!s.ev.length) h += '<div class="muted" style="margin-top:6px">この枠に予定はありません。</div>';
-  s.ev.forEach(function (i) {
-    var e = grid.events[i];
-    h += '<div class="e"><b>' + esc(e.title || '（タイトルなし）') + '</b> <span class="muted">' + esc(e.calendar) + '</span><br>'
-      + (e.allDay ? '終日' : esc(Slots.hhmm(e.start) + '–' + Slots.hhmm(e.end)))
-      + (e.location ? '　📍' + esc(e.location) : '')
-      + (e.description ? '<div style="white-space:pre-wrap;margin-top:4px">' + esc(e.description) + '</div>' : '') + '</div>';
-  });
+function showDetailAt(ms) {
+  var z = ms + ROW_MIN * 60000;
+  var evs = calData.events.filter(function (e) { return e.start < z && ms < e.end; });
+  var slot = slotStartAt(ms);
+  var sym = slot !== null ? symbolFor(slot) : null;
+  var h = '<div class="detail"><b>' + esc(Slots.formatRange({ start: ms, end: z })) + '</b>　'
+    + (sym ? '相手には ' + sym.y + (sym.ov ? '（手で上書き）' : '') + ' と表示' : '相手には表示しない時間');
+  if (!evs.length) h += '<div class="muted" style="margin-top:6px">この時間に予定はありません。</div>';
+  evs.forEach(function (e) { h += eventDetail(e); });
   $('detail').innerHTML = h + '</div>';
 }
 
+function eventDetail(e) {
+  return '<div class="e"><b>' + esc(e.title || '（タイトルなし）') + '</b> <span class="muted">' + esc(e.calendar) + '</span><br>'
+    + (e.allDay ? '終日' : esc(Slots.hhmm(e.start) + '–' + Slots.hhmm(e.end)))
+    + (e.location ? '　📍' + esc(e.location) : '')
+    + (e.description ? '<div style="white-space:pre-wrap;margin-top:4px">' + esc(e.description) + '</div>' : '') + '</div>';
+}
+
 function bindEditor() {
-  ['f-start', 'f-end', 'f-ds', 'f-de', 'f-slot'].forEach(function (id) { $(id).onchange = function () { readForm(); refreshGrid(); }; });
+  ['f-start', 'f-end'].forEach(function (id) { $(id).onchange = function () { readForm(); page = -1; ensureData(false).then(recompute); }; });
+  ['f-ds', 'f-de', 'f-slot'].forEach(function (id) { $(id).onchange = function () { readForm(); recompute(); }; });
   $('f-name').oninput = readForm;
   $('f-wd').onclick = function (e) {
     var s = e.target.closest('span'); if (!s) return;
     var w = draft.weekdays.split(''); var i = Number(s.dataset.i);
     w[i] = w[i] === '1' ? '0' : '1'; draft.weekdays = w.join('');
-    s.classList.toggle('on'); refreshGrid();
+    s.classList.toggle('on'); recompute();
   };
   $('brushes').onclick = function (e) {
     var b = e.target.closest('.brush'); if (!b) return;
     brush = b.dataset.b;
-    [].forEach.call(document.querySelectorAll('.brush'), function (x) { x.classList.toggle('on', x === b); });
+    [].forEach.call(document.querySelectorAll('#brushes .brush'), function (x) { x.classList.toggle('on', x === b); });
   };
-  $('prev').onclick = function () { page--; renderGrid(); };
-  $('next').onclick = function () { page++; renderGrid(); };
+  $('prev').onclick = function () { page--; renderWeek(); };
+  $('next').onclick = function () { page++; renderWeek(); };
+  $('reload').onclick = function () { var b = $('reload'); busy(b, true); ensureData(true).then(function () { busy(b, false); recompute(); toast('最新の予定を読み込みました'); }, function () { busy(b, false); }); };
   $('save').onclick = function () {
     readForm();
     var b = $('save'); busy(b, true);
     call('adminSaveLink', draft).then(function (l) {
       var isNew = !draft.id;
+      var keepPage = page;
       draft = l; toast(isNew ? 'リンクを発行しました' : '保存しました');
-      return load().then(function () { renderEditor(); });
+      return load().then(function () { page = keepPage; renderEditor(); });
     }, function () { busy(b, false); });
   };
   if ($('copy-url')) $('copy-url').onclick = function () { copyText($('f-url')); };
+}
 
-  var g = $('grid'), drag = null;
-  function cellAt(ev) { var el = document.elementFromPoint(ev.clientX, ev.clientY); return el && el.closest ? el.closest('.c') : null; }
-  function paint(c) {
-    if (!c || !drag) return;
-    var col = c.dataset.s && Slots.jstDateString(Number(c.dataset.s));
-    if (col !== drag.day) return;
-    var a = Math.min(Number(c.dataset.s), drag.from), z = Math.max(Number(c.dataset.s), drag.from);
-    var step = draft.slotMinutes * 60000;
-    for (var t = a; t <= z; t += step) {
-      if (brush === 'reset') delete draft.overrides[t]; else draft.overrides[t] = brush;
-    }
-    renderGrid();
+// Drag state lives outside the calendar DOM so it survives updates during a drag.
+var calDrag = null;
+
+function cellClass(ms) {
+  var slot = slotStartAt(ms);
+  var sym = slot !== null ? symbolFor(slot) : null;
+  return sym ? { cls: 'cell paint y-' + sym.y + (sym.ov ? ' ov' : ''), text: sym.y } : { cls: 'cell out', text: '' };
+}
+
+// Repaint cells in place (no re-render) so dragging stays smooth.
+function refreshCells() {
+  [].forEach.call(document.querySelectorAll('#calbody .cell'), function (c) {
+    var k = cellClass(Number(c.dataset.ms));
+    if (c.className !== k.cls) c.className = k.cls;
+    if (c.textContent !== k.text) c.textContent = k.text;
+  });
+}
+
+function paintTo(c) {
+  if (!c || !calDrag) return;
+  var ms = Number(c.dataset.ms);
+  if (Slots.jstDateString(ms) !== calDrag.day) return;
+  var a = Math.min(ms, calDrag.from), z = Math.max(ms, calDrag.from);
+  var next = Object.assign({}, calDrag.base);
+  for (var t = a; t <= z; t += ROW_MIN * 60000) {
+    var s = slotStartAt(t);
+    if (s === null) continue;
+    if (brush === 'reset') delete next[s]; else next[s] = brush;
   }
-  g.onpointerdown = function (ev) {
-    var c = ev.target.closest('.c'); if (!c) return;
-    if (brush === 'info') { showDetail(c.dataset.s); return; }
-    drag = { day: Slots.jstDateString(Number(c.dataset.s)), from: Number(c.dataset.s) };
-    paint(c); ev.preventDefault();
+  draft.overrides = next;
+  refreshCells();
+}
+
+function cellAtPoint(ev) {
+  var el = document.elementFromPoint(ev.clientX, ev.clientY);
+  return el && el.closest ? el.closest('#calbody .cell') : null;
+}
+
+document.addEventListener('pointermove', function (ev) { if (calDrag) paintTo(cellAtPoint(ev)); });
+document.addEventListener('pointerup', function () { calDrag = null; });
+document.addEventListener('pointercancel', function () { calDrag = null; });
+
+function bindCalendar() {
+  $('calbody').onpointerdown = function (ev) {
+    var c = ev.target.closest('.cell'); if (!c) return;
+    var ms = Number(c.dataset.ms);
+    if (brush === 'info') { showDetailAt(ms); return; }
+    if (c.classList.contains('out')) { toast('この時間は相手に見せていません（時間帯・曜日・期間を確認）'); return; }
+    calDrag = { day: Slots.jstDateString(ms), from: ms, base: Object.assign({}, draft.overrides) };
+    paintTo(c);
+    ev.preventDefault();
   };
-  g.onpointermove = function (ev) { if (drag) paint(cellAt(ev)); };
-  document.onpointerup = function () { drag = null; };
+  [].forEach.call(document.querySelectorAll('.allday'), function (el) {
+    el.onclick = function () { $('detail').innerHTML = '<div class="detail">' + eventDetail(calData.events[Number(el.dataset.ev)]) + '</div>'; };
+  });
 }
 
 // ================= カレンダー設定 =================
 function renderRules() {
+  if (!S.calendars) {
+    $('tab-rules').innerHTML = '<div class="loading">カレンダー一覧を読み込み中…</div>';
+    call('adminListCalendars').then(function (c) { S.calendars = c; renderRules(); });
+    return;
+  }
   var h = '<p class="muted">カレンダーごとに、予定を相手にどう見せるかを決めます。<br>× 外せない＝予定と前後のバッファーが×。△ 相談可＝予定が△、前後のバッファーが○。無視＝空きとして扱う（終日予定も無視）。</p>'
     + '<table class="rules"><tr><th>カレンダー</th><th>扱い</th><th>前後バッファー</th></tr>';
   S.calendars.forEach(function (c) {
@@ -411,7 +540,7 @@ function renderRules() {
       rules[tr.dataset.id] = { name: tr.dataset.name, kind: tr.querySelector('select').value, bufferMin: Number(tr.querySelector('input').value) };
     });
     var b = $('save-rules'); busy(b, true);
-    call('adminSaveRules', rules).then(function (r) { S.rules = r; busy(b, false); toast('保存しました'); }, function () { busy(b, false); });
+    call('adminSaveRules', rules).then(function (r) { S.rules = r; calData = null; busy(b, false); toast('保存しました'); }, function () { busy(b, false); });
   };
 }
 

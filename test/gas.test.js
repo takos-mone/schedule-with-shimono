@@ -139,7 +139,8 @@ test('anonymous users cannot reach admin functions or pages', () => {
   newLink(env);
   env.setActive('');
   assert.throws(() => env.ctx.adminGetState(), /forbidden/);
-  assert.throws(() => env.ctx.adminGetGrid({}), /forbidden/);
+  assert.throws(() => env.ctx.adminGetCalendarData('2026-10-27', '2026-10-27'), /forbidden/);
+  assert.throws(() => env.ctx.adminListCalendars(), /forbidden/);
   assert.throws(() => env.ctx.adminApprove('x'), /forbidden/);
   assert.match(env.ctx.doGet({ parameter: {} }).html, /見つかりません/);
   assert.match(env.ctx.doGet({ parameter: { action: 'approve', id: 'x' } }).html, /見つかりません/);
@@ -166,10 +167,20 @@ test('reject marks pending ranges and mails the guest; approve with adjusted tim
   assert.match(env.sent.at(-1).htmlBody, /ごめんなさい/);
 });
 
-test('admin grid includes event details for the owner', () => {
+test('calendar data for the editor has details, pending holds, and is cached', () => {
   const env = setupEnv();
-  const g = env.ctx.adminGetGrid({ startDate: '2026-10-27', endDate: '2026-10-27', dayStart: 17 * 60, dayEnd: 22 * 60, weekdays: '1111111', slotMinutes: 30 });
-  const slot = g.slots.find((s) => s.s === jst('2026-10-27', '18:00'));
-  assert.equal(g.events[slot.ev[0]].title, 'シフト');
-  assert.equal(g.events[slot.ev[0]].calendar, 'バイト');
+  const link = newLink(env);
+  env.setActive('');
+  post(env, { action: 'request', l: link.id, name: 'a', email: 'a@b.co', ranges: [{ start: jst('2026-10-26', '17:00'), end: jst('2026-10-26', '18:00') }] });
+  env.setActive('owner@example.com');
+  const d = env.ctx.adminGetCalendarData('2026-10-26', '2026-10-28');
+  const shift = d.events.find((e) => e.title === 'シフト');
+  assert.equal(shift.calendar, 'バイト');
+  assert.equal(shift.kind, 'block');
+  assert.ok(!d.events.some((e) => e.title === 'secret')); // ignored calendar
+  assert.equal(d.pending.length, 1);
+  assert.equal(d.from, jst('2026-10-26', '00:00'));
+  assert.equal(d.to, jst('2026-10-29', '00:00'));
+  assert.ok(Object.keys(env.cache).some((k) => k.startsWith('cal:')));
+  assert.equal(env.ctx.adminListCalendars().length, 6);
 });
