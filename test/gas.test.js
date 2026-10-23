@@ -184,3 +184,14 @@ test('calendar data for the editor has details, pending holds, and is cached', (
   assert.ok(Object.keys(env.cache).some((k) => k.startsWith('cal:')));
   assert.equal(env.ctx.adminListCalendars().length, 6);
 });
+
+test('15-minute slots are accepted and served to guests', () => {
+  const env = setupEnv();
+  const link = newLink(env, { slotMinutes: 15, endDate: '2026-10-26' });
+  assert.equal(link.slotMinutes, 15);
+  const res = get(env, { action: 'availability', l: link.id });
+  assert.equal(res.slots.length, 20); // 17:00-22:00 in 15-minute steps
+  env.setActive('');
+  const r = { start: jst('2026-10-26', '17:15'), end: jst('2026-10-26', '17:45') };
+  assert.equal(post(env, { action: 'request', l: link.id, name: 'a', email: 'a@b.co', ranges: [r] }).ok, true);
+});

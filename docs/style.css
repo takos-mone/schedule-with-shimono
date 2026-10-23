@@ -57,3 +57,5 @@ footer { margin-top: 32px; color: #aaa; font-size: 11px; }
   .gh { font-size: 11px; }
   .c { font-size: 11px; }
 }
+.grid.q .c { height: 16px; font-size: 10px; }
+.grid.q .gt { line-height: 16px; }

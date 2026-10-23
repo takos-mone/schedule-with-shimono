@@ -91,7 +91,7 @@ function normalizeLink_(d) {
     dayStart: Number(d.dayStart),
     dayEnd: Number(d.dayEnd),
     weekdays: /^[01]{7}$/.test(d.weekdays) ? d.weekdays : DEFAULT_LINK.weekdays,
-    slotMinutes: Number(d.slotMinutes) === 60 ? 60 : 30,
+    slotMinutes: [15, 30, 60].indexOf(Number(d.slotMinutes)) >= 0 ? Number(d.slotMinutes) : 30,
     overrides: {},
     active: d.active !== false,
     createdAt: d.createdAt || Date.now(),

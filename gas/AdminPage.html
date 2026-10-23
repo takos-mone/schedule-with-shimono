@@ -71,21 +71,26 @@
   .gutter div{height:calc(var(--row)*2);font-size:10px;color:#999;text-align:right;padding-right:4px;transform:translateY(-6px)}
   .day{position:relative;border-left:1px solid var(--line);touch-action:none}
   .cell{height:var(--row);border-bottom:1px solid #f0f0f2;display:flex;align-items:center;padding-left:3px;font-size:10px;font-weight:700}
-  .cell:nth-child(2n){border-bottom-color:#e2e2e6}
+  .cell.hr{border-bottom-color:#d8d8dc}
   .cell.out{background:#fff;color:transparent}
   .cell.paint{cursor:crosshair}
   .cell.y-◎,.cell.y-○,.cell.y-△,.cell.y-×{opacity:.85}
   .cell.ov{box-shadow:inset 3px 0 0 var(--ink)}
   .cell.ov::after{content:"●";font-size:8px;margin-left:2px}
   .day.off .cell{background:repeating-linear-gradient(45deg,#f6f6f6 0 4px,#ececec 4px 8px)!important;color:transparent}
-  .ev{position:absolute;left:34%;right:2px;border-radius:4px;background:#fff;border:1px solid #c7c7cc;border-left:4px solid var(--r);padding:1px 4px;font-size:10px;line-height:1.25;overflow:hidden;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .ev{position:absolute;left:34%;right:2px;border-radius:4px;background:#fff;border:1px solid #c7c7cc;border-left:4px solid var(--r);padding:1px 4px;font-size:10px;line-height:1.25;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .ev:hover{border-color:var(--ink);z-index:3}
   .ev.soft{border-left-color:var(--o)}
   .ev b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .now{position:absolute;left:0;right:0;height:2px;background:#e8433a;pointer-events:none;z-index:2}
 
-  .detail{border:2px solid var(--ink);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13px;background:#fffdf2}
-  .detail .e{padding:6px 0;border-bottom:1px solid var(--line)}
-  .detail .e:last-child{border:0}
+  .pop{position:fixed;z-index:20;width:320px;max-width:calc(100vw - 16px);max-height:60vh;overflow:auto;border:2px solid var(--ink);border-radius:10px;padding:10px 12px;font-size:13px;background:#fffdf2;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+  .pop .x{position:absolute;top:4px;right:6px;border:0;background:none;font-size:18px;cursor:pointer;color:var(--sub)}
+  .resets{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .resets .btn{font-size:12px;padding:5px 9px}
+  .resets .btn.armed{background:var(--r);color:#fff}
+  .pop .e{padding:6px 0;border-bottom:1px solid var(--line)}
+  .pop .e:last-child{border:0}
   table.rules{border-collapse:collapse;width:100%}
   table.rules td,table.rules th{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left}
   .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;font-weight:700;display:none;z-index:10}
@@ -115,7 +120,8 @@ var PARAMS = JSON.parse(<?= params ?>);
 var SYMS = ['◎', '○', '△', '×'];
 var LABEL = { '◎': '空いています', '○': '空き・前後に予定', '△': '相談可・未定', '×': '不可' };
 var WD = ['月', '火', '水', '木', '金', '土', '日'];
-var ROW_MIN = 30;        // editor rows are always 30 minutes, like Google Calendar
+var ROW_MIN = 30;        // editor row length: 30 min like Google Calendar, 15 min when guests pick 15-min slots
+var rowPx = 18;
 var S = null;            // server state
 var draft = null;        // link being edited
 var calData = null;      // cached { from, to, loadedAt, events, pending }
@@ -280,12 +286,12 @@ function renderEditor() {
   var d = draft;
   var h = '<div class="editor"><div class="form card">'
     + '<h3 style="margin:0 0 4px">1. 誰に送る？</h3>'
-    + '<label class="f">相手の名前（相手のページに表示）<input id="f-name" style="width:100%" value="' + esc(d.name) + '" placeholder="山田さん（家庭教師）"></label>'
+    + '<label class="f">相手の名前（相手のページに表示）<input id="f-name" style="width:100%" value="' + esc(d.name) + '"></label>'
     + '<h3 style="margin:16px 0 4px">2. 相手に見せる範囲</h3>'
     + '<label class="f">期間<div class="row"><input type="date" id="f-start" value="' + d.startDate + '">〜<input type="date" id="f-end" value="' + d.endDate + '"></div></label>'
     + '<label class="f">相手に見せる時間帯<div class="row"><select id="f-ds">' + timeOptions(d.dayStart) + '</select>〜<select id="f-de">' + timeOptions(d.dayEnd) + '</select></div></label>'
     + '<label class="f">曜日<div class="days" id="f-wd">' + WD.map(function (w, i) { return '<span data-i="' + i + '" class="' + (d.weekdays[i] === '1' ? 'on' : '') + '">' + w + '</span>'; }).join('') + '</div></label>'
-    + '<label class="f">相手が選べる枠の長さ<select id="f-slot"><option value="30"' + (d.slotMinutes === 30 ? ' selected' : '') + '>30分</option><option value="60"' + (d.slotMinutes === 60 ? ' selected' : '') + '>1時間</option></select></label>'
+    + '<label class="f">相手が選べる枠の長さ<select id="f-slot"><option value="15"' + (d.slotMinutes === 15 ? ' selected' : '') + '>15分</option><option value="30"' + (d.slotMinutes === 30 ? ' selected' : '') + '>30分</option><option value="60"' + (d.slotMinutes === 60 ? ' selected' : '') + '>1時間</option></select></label>'
     + '<h3 style="margin:16px 0 4px">3. 手で上書き</h3>'
     + '<div class="brushes" id="brushes">'
     + brushButton('info', '🔍 予定を見る')
@@ -294,14 +300,16 @@ function renderEditor() {
     + brushButton('○', '○ 空き(タイト)', 'b-○')
     + brushButton('◎', '◎ 空き', 'b-◎')
     + brushButton('reset', '自動に戻す') + '</div>'
-    + '<div class="muted">ブラシを選んで、色のついた枠をドラッグ。左に黒い線と●＝手で変えた枠。白い時間帯は相手に見せない時間です。</div>'
+    + '<div class="resets"><button type="button" class="btn" id="reset-week">この週の上書きをリセット</button><button type="button" class="btn" id="reset-all">すべての上書きをリセット</button></div>'
+    + '<div class="muted" id="ov-count" style="margin-top:4px"></div>'
+    + '<div class="muted">ブラシを選んで、色のついた枠をドラッグ。左に黒い線と●＝手で変えた枠。白い時間帯は相手に見せない時間です。予定のブロックを押すと詳細が出ます。</div>'
     + '<div style="margin-top:16px"><button class="btn go big" id="save" style="width:100%">' + (d.id ? '保存する' : 'リンクを発行する') + '</button></div>'
     + (d.id ? '<input class="url" readonly id="f-url" value="' + esc(guestUrl(d)) + '"><div class="row" style="margin-top:6px"><button class="btn" id="copy-url">リンクをコピー</button></div>' : '')
     + '</div><div class="calwrap"><div class="legend">' + SYMS.map(function (s) { return '<span class="pill y-' + s + '">' + s + ' ' + LABEL[s] + '</span>'; }).join('') + '</div>'
     + '<div class="pager"><button class="btn" id="prev">‹ 前の週</button><span id="range-label" class="round"></span><button class="btn" id="next">次の週 ›</button>'
     + '<button class="btn" id="reload" title="Googleカレンダーから読み直す">↻ 最新にする</button></div>'
     + '<div id="cal" class="cal"><div class="loading" style="padding:20px">カレンダーを読み込み中…</div></div>'
-    + '<div class="muted" id="loaded-at" style="margin-top:4px"></div><div id="detail"></div></div></div>';
+    + '<div class="muted" id="loaded-at" style="margin-top:4px"></div></div></div>';
   $('tab-edit').innerHTML = h;
   bindEditor();
   ensureData(false).then(recompute);
@@ -331,6 +339,8 @@ function recompute() {
     $('cal').innerHTML = '<div class="loading" style="padding:20px">期間を確認してください。</div>';
     return;
   }
+  ROW_MIN = draft.slotMinutes === 15 ? 15 : 30;
+  rowPx = ROW_MIN === 15 ? 12 : 18;
   var slots = Slots.generateSlots(draft);
   var auto = Slots.classify(slots, { events: calData.events, pending: calData.pending, overrides: {} });
   var now = Date.now();
@@ -379,9 +389,8 @@ function renderWeek() {
     return '<div class="dh' + (inRange(d) ? '' : ' off') + '">' + dt.getUTCDate() + '<small>' + '日月火水木金土'[dt.getUTCDay()] + '</small>'
       + allDay.map(function (e) { return '<span class="allday" data-ev="' + e.i + '">終日 ' + esc(e.title || '予定') + '</span>'; }).join('') + '</div>';
   }).join('') + '</div>';
-  var rowPx = 18;
-  var body = '<div class="cal-body" id="calbody" style="grid-template-columns:' + cols + '"><div class="gutter">';
-  for (var hh = 0; hh < 24; hh++) body += '<div>' + (hh ? hh + ':00' : '') + '</div>';
+  var body = '<div class="cal-body" id="calbody" style="--row:' + rowPx + 'px;grid-template-columns:' + cols + '"><div class="gutter">';
+  for (var hh = 0; hh < 24; hh++) body += '<div style="height:' + (60 / ROW_MIN * rowPx) + 'px">' + (hh ? hh + ':00' : '') + '</div>';
   body += '</div>';
   var now = Date.now();
   days.forEach(function (d) {
@@ -390,12 +399,12 @@ function renderWeek() {
     for (var m = 0; m < 1440; m += ROW_MIN) {
       var ms = a + m * 60000;
       var k = cellClass(ms);
-      body += '<div class="' + k.cls + '" data-ms="' + ms + '">' + k.text + '</div>';
+      body += '<div class="' + k.cls + ((m + ROW_MIN) % 60 === 0 ? ' hr' : '') + '" data-ms="' + ms + '">' + k.text + '</div>';
     }
     dayEvents(d).filter(function (e) { return !e.allDay; }).forEach(function (e) {
       var s = Math.max(e.start, a), z = Math.min(e.end, a + DAY);
       var top = (s - a) / 60000 / ROW_MIN * rowPx, hgt = Math.max((z - s) / 60000 / ROW_MIN * rowPx - 1, 14);
-      body += '<div class="ev' + (e.kind === 'soft' ? ' soft' : '') + '" style="top:' + top + 'px;height:' + hgt + 'px"><b>' + esc(e.title || '（タイトルなし）') + '</b>'
+      body += '<div class="ev' + (e.kind === 'soft' ? ' soft' : '') + '" data-ev="' + e.i + '" style="top:' + top + 'px;height:' + hgt + 'px"><b>' + esc(e.title || '（タイトルなし）') + '</b>'
         + Slots.hhmm(e.start) + '–' + Slots.hhmm(e.end) + '</div>';
     });
     if (now >= a && now < a + DAY) body += '<div class="now" style="top:' + ((now - a) / 60000 / ROW_MIN * rowPx) + 'px"></div>';
@@ -408,21 +417,41 @@ function renderWeek() {
   bindCalendar();
 }
 
-function showDetailAt(ms) {
+function showPopover(html, x, y) {
+  closePopover();
+  var p = document.createElement('div');
+  p.className = 'pop';
+  p.id = 'pop';
+  p.innerHTML = '<button class="x" type="button" aria-label="閉じる">×</button>' + html;
+  document.body.appendChild(p);
+  var w = p.offsetWidth, h = p.offsetHeight;
+  p.style.left = Math.max(8, Math.min(x + 12, window.innerWidth - w - 8)) + 'px';
+  p.style.top = Math.max(8, Math.min(y + 12, window.innerHeight - h - 8)) + 'px';
+  p.querySelector('.x').onclick = closePopover;
+}
+function closePopover() { var p = $('pop'); if (p) p.remove(); }
+document.addEventListener('pointerdown', function (ev) {
+  if ($('pop') && !ev.target.closest('#pop') && !ev.target.closest('.ev') && !ev.target.closest('.allday')) closePopover();
+});
+document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') closePopover(); });
+
+function showDetailAt(ms, x, y) {
   var z = ms + ROW_MIN * 60000;
   var evs = calData.events.filter(function (e) { return e.start < z && ms < e.end; });
   var slot = slotStartAt(ms);
   var sym = slot !== null ? symbolFor(slot) : null;
-  var h = '<div class="detail"><b>' + esc(Slots.formatRange({ start: ms, end: z })) + '</b>　'
-    + (sym ? '相手には ' + sym.y + (sym.ov ? '（手で上書き）' : '') + ' と表示' : '相手には表示しない時間');
+  var h = '<b>' + esc(Slots.formatRange({ start: ms, end: z })) + '</b><br><span class="muted">'
+    + (sym ? '相手には ' + sym.y + (sym.ov ? '（手で上書き）' : '') + ' と表示' : '相手には表示しない時間') + '</span>';
   if (!evs.length) h += '<div class="muted" style="margin-top:6px">この時間に予定はありません。</div>';
   evs.forEach(function (e) { h += eventDetail(e); });
-  $('detail').innerHTML = h + '</div>';
+  showPopover(h, x, y);
 }
 
 function eventDetail(e) {
-  return '<div class="e"><b>' + esc(e.title || '（タイトルなし）') + '</b> <span class="muted">' + esc(e.calendar) + '</span><br>'
-    + (e.allDay ? '終日' : esc(Slots.hhmm(e.start) + '–' + Slots.hhmm(e.end)))
+  var kind = e.kind === 'soft' ? '△ 相談可' : '× 外せない';
+  return '<div class="e"><b style="font-size:14px">' + esc(e.title || '（タイトルなし）') + '</b><br><span class="muted">' + esc(e.calendar) + '・' + kind + '・前後' + (e.bufferMin || 0) + '分</span><br>'
+    + (e.allDay ? Slots.formatRange({ start: e.start, end: e.start }).split(' ')[0] + ' 終日'
+      : esc(Slots.formatRange({ start: e.start, end: e.end })))
     + (e.location ? '　📍' + esc(e.location) : '')
     + (e.description ? '<div style="white-space:pre-wrap;margin-top:4px">' + esc(e.description) + '</div>' : '') + '</div>';
 }
@@ -456,6 +485,21 @@ function bindEditor() {
     }, function () { busy(b, false); });
   };
   if ($('copy-url')) $('copy-url').onclick = function () { copyText($('f-url')); };
+  $('reset-week').onclick = function () {
+    var b = this;
+    armed(b, 'この週の上書きをリセット', function () {
+      var a = Slots.jstMidnight(weeks[page]), z = a + 7 * DAY;
+      var next = {};
+      Object.keys(draft.overrides).forEach(function (k) { if (Number(k) < a || Number(k) >= z) next[k] = draft.overrides[k]; });
+      draft.overrides = next; refreshCells(); updateOverrideCount(); toast('この週の上書きをリセットしました（保存で反映）');
+    });
+  };
+  $('reset-all').onclick = function () {
+    var b = this;
+    armed(b, 'すべての上書きをリセット', function () {
+      draft.overrides = {}; refreshCells(); updateOverrideCount(); toast('すべての上書きをリセットしました（保存で反映）');
+    });
+  };
 }
 
 // Drag state lives outside the calendar DOM so it survives updates during a drag.
@@ -476,10 +520,8 @@ function refreshCells() {
   });
 }
 
-function paintTo(c) {
-  if (!c || !calDrag) return;
-  var ms = Number(c.dataset.ms);
-  if (Slots.jstDateString(ms) !== calDrag.day) return;
+function paintTo(ms) {
+  if (ms === null || !calDrag) return;
   var a = Math.min(ms, calDrag.from), z = Math.max(ms, calDrag.from);
   var next = Object.assign({}, calDrag.base);
   for (var t = a; t <= z; t += ROW_MIN * 60000) {
@@ -489,30 +531,50 @@ function paintTo(c) {
   }
   draft.overrides = next;
   refreshCells();
+  updateOverrideCount();
 }
 
-function cellAtPoint(ev) {
-  var el = document.elementFromPoint(ev.clientX, ev.clientY);
-  return el && el.closest ? el.closest('#calbody .cell') : null;
+// Row under the pointer in the column where the drag started (works over event blocks too).
+function rowAtPoint(ev) {
+  var r = calDrag.dayEl.getBoundingClientRect();
+  var rows = 1440 / ROW_MIN;
+  var i = Math.max(0, Math.min(rows - 1, Math.floor((ev.clientY - r.top) / (r.height / rows))));
+  return calDrag.dayStart + i * ROW_MIN * 60000;
 }
 
-document.addEventListener('pointermove', function (ev) { if (calDrag) paintTo(cellAtPoint(ev)); });
+document.addEventListener('pointermove', function (ev) { if (calDrag) paintTo(rowAtPoint(ev)); });
 document.addEventListener('pointerup', function () { calDrag = null; });
 document.addEventListener('pointercancel', function () { calDrag = null; });
 
+function updateOverrideCount() {
+  var n = Object.keys(draft.overrides).length;
+  if ($('ov-count')) $('ov-count').textContent = n ? '手で上書きした枠：' + n + '個（保存すると相手のページに反映）' : '手で上書きした枠はありません';
+}
+
+// Two-step confirm: first click arms the button, second click within 4s runs.
+function armed(btn, label, run) {
+  if (btn.classList.contains('armed')) { btn.classList.remove('armed'); btn.textContent = label; run(); return; }
+  btn.classList.add('armed'); btn.textContent = 'もう一度押すとリセット';
+  setTimeout(function () { btn.classList.remove('armed'); btn.textContent = label; }, 4000);
+}
+
 function bindCalendar() {
   $('calbody').onpointerdown = function (ev) {
+    var evEl = ev.target.closest('.ev');
+    if (evEl) { showPopover(eventDetail(calData.events[Number(evEl.dataset.ev)]), ev.clientX, ev.clientY); return; }
     var c = ev.target.closest('.cell'); if (!c) return;
     var ms = Number(c.dataset.ms);
-    if (brush === 'info') { showDetailAt(ms); return; }
+    if (brush === 'info') { showDetailAt(ms, ev.clientX, ev.clientY); return; }
     if (c.classList.contains('out')) { toast('この時間は相手に見せていません（時間帯・曜日・期間を確認）'); return; }
-    calDrag = { day: Slots.jstDateString(ms), from: ms, base: Object.assign({}, draft.overrides) };
-    paintTo(c);
+    var dayEl = c.closest('.day');
+    calDrag = { dayEl: dayEl, dayStart: Slots.jstMidnight(dayEl.dataset.d), from: ms, base: Object.assign({}, draft.overrides) };
+    paintTo(ms);
     ev.preventDefault();
   };
   [].forEach.call(document.querySelectorAll('.allday'), function (el) {
-    el.onclick = function () { $('detail').innerHTML = '<div class="detail">' + eventDetail(calData.events[Number(el.dataset.ev)]) + '</div>'; };
+    el.onclick = function (ev) { showPopover(eventDetail(calData.events[Number(el.dataset.ev)]), ev.clientX, ev.clientY); };
   });
+  updateOverrideCount();
 }
 
 // ================= カレンダー設定 =================

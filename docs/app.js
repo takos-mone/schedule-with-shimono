@@ -82,6 +82,7 @@
     $('prev').disabled = week === 0;
     $('next').disabled = week >= weeks.length - 1;
     var g = $('grid');
+    g.classList.toggle('q', l.slotMinutes === 15);
     g.style.gridTemplateColumns = '38px repeat(' + Math.max(days.length, 1) + ', minmax(0, 1fr))';
     var h = '<div></div>' + days.map(function (d) {
       var dt = new Date(Slots.jstMidnight(d) + Slots.JST_OFFSET_MS);
