@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Noto Sans JP",sans-serif;background:#fff;color:#1d1d1f}
+  .tabs{position:sticky;top:0;z-index:5;background:#1d1d1f;display:flex;gap:6px;padding:8px 12px;flex-wrap:wrap}
+  .tabs button{border:0;background:#3a3a3c;color:#ddd;padding:7px 12px;border-radius:4px;font:inherit;font-size:13px;cursor:pointer}
+  .tabs button.on{background:#fff;color:#1d1d1f;font-weight:700}
+  .view{display:none;max-width:1040px;margin:0 auto;padding:22px 16px 60px}
+  .view.on{display:block}
+  h1{font-family:"M PLUS Rounded 1c",sans-serif;font-weight:800;font-size:24px;margin:0;letter-spacing:.02em}
+  h1 .with{font-weight:500;color:#888;font-size:18px;margin:0 6px}
+  h1 .name{background:linear-gradient(transparent 60%,#ffe14d 60%);padding:0 2px}
+  .sub{font-size:13px;color:#666;margin:6px 0 16px}
+  .legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;border:2px solid #1d1d1f}
+  .wrap{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+  .gridbox{flex:1 1 520px;min-width:0;max-width:680px}
+  .grid{display:grid;grid-template-columns:38px repeat(7,1fr);gap:2px;user-select:none}
+  .h{text-align:center;font-family:"M PLUS Rounded 1c";font-weight:700;font-size:12px;padding:4px 0}
+  .h small{display:block;font-size:10px;color:#888;font-weight:500}
+  .t{font-size:10px;color:#999;text-align:right;padding-right:4px;line-height:20px}
+  .c{height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;position:relative}
+  .c.x{cursor:not-allowed}
+  .c.sel{box-shadow:0 0 0 2px #1d1d1f inset}
+  .c.ov::after{content:"";position:absolute;top:2px;right:2px;width:5px;height:5px;border-radius:50%;background:#1d1d1f}
+  .c.off{background:repeating-linear-gradient(45deg,#f2f2f2 0 4px,#e6e6e6 4px 8px)!important;color:#bbb!important;cursor:default}
+  .side{flex:1 1 250px;min-width:0;border:2px solid #1d1d1f;border-radius:10px;padding:14px}
+  .side h3{font-family:"M PLUS Rounded 1c";font-size:15px;margin:0 0 8px}
+  .side label{display:block;font-size:12px;font-weight:700;margin-top:10px}
+  .side input,.side textarea,.side select{width:100%;margin-top:4px;padding:7px 9px;border:1.5px solid #c7c7cc;border-radius:6px;font:inherit;font-size:13px}
+  .row{display:flex;gap:6px;align-items:center}
+  .row input,.row select{flex:1;min-width:0}
+  .btn{display:block;width:100%;margin-top:14px;padding:11px;border:2px solid #1d1d1f;border-radius:8px;background:#22a447;color:#fff;font-family:"M PLUS Rounded 1c";font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 3px 0 #1d1d1f}
+  .btn:active{transform:translateY(2px);box-shadow:0 1px 0 #1d1d1f}
+  .sellist{font-size:13px;line-height:1.8}
+  .sellist .slot{display:inline-block;background:#eaf7ee;border:1.5px solid #22a447;border-radius:6px;padding:0 8px;margin:2px 0}
+  .brushes{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px}
+  .brush{padding:6px 10px;border-radius:6px;border:2px solid #c7c7cc;background:#fff;font-size:12px;font-weight:700;cursor:pointer}
+  .brush.on{border-color:#1d1d1f;box-shadow:0 2px 0 #1d1d1f}
+  .days{display:flex;gap:4px;margin-top:4px}
+  .days span{flex:1;text-align:center;border:1.5px solid #c7c7cc;border-radius:6px;padding:4px 0;font-size:12px;cursor:pointer}
+  .days span.on{background:#1d1d1f;color:#fff;border-color:#1d1d1f}
+  .note{font-size:11px;color:#888;margin-top:4px}
+  .ev{font-size:9px;font-weight:500;opacity:.85;overflow:hidden;white-space:nowrap}
+  table.links{width:100%;border-collapse:collapse;font-size:13px;margin-top:24px}
+  table.links th,table.links td{border-bottom:1px solid #e5e5ea;padding:8px 6px;text-align:left}
+  .badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+  .admin-tag{display:inline-block;background:#1d1d1f;color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;margin-bottom:8px}
+</style></head>
+<body>
+<div class="tabs">
+  <button class="on" onclick="show('admin',this)">① 下野の管理ページ（自分専用）</button>
+  <button onclick="show('guest',this)">② 相手に届くページ</button>
+</div>
+
+<!-- ================= ADMIN ================= -->
+<div class="view on" id="admin">
+  <span class="admin-tag">管理者のみ・下野のGoogleアカウントでしか開けません</span>
+  <h1>送る前の調整</h1>
+  <div class="sub">相手ごとにリンクを作ります。カレンダーから自動で付いた記号を、送る前に上書きできます。</div>
+  <div class="wrap">
+    <div class="side" style="order:2">
+      <h3>1. 誰に送る？</h3>
+      <label>相手の名前（リンクの表示名）<input value="山田さん（家庭教師）"></label>
+      <h3 style="margin-top:16px">2. 見せる範囲</h3>
+      <label>期間<div class="row"><input type="date" value="2026-10-26"> 〜 <input type="date" value="2026-11-08"></div></label>
+      <label>時間帯<div class="row"><select><option>17:00</option></select> 〜 <select><option>22:00</option></select></div></label>
+      <label>曜日<div class="days" id="days"></div></label>
+      <label>枠の長さ<select><option>30分単位</option><option>1時間単位</option></select></label>
+      <h3 style="margin-top:16px">3. 手で上書き</h3>
+      <div class="brushes" id="brushes"></div>
+      <div class="note">枠をドラッグで塗れます。●印＝手で変えた枠</div>
+      <button class="btn">リンクを発行する</button>
+      <div class="note">発行後もこの画面で編集でき、相手のページに反映されます（案）</div>
+    </div>
+    <div class="gridbox" style="order:1">
+      <div class="legend" id="legendA"></div>
+      <div class="grid" id="gridA"></div>
+    </div>
+  </div>
+  <table class="links">
+    <tr><th>相手</th><th>期間</th><th>状態</th><th></th></tr>
+    <tr><td>山田さん（家庭教師）</td><td>10/26–11/8</td><td><span class="badge" style="background:#fff3cd">申請 2件 未対応</span></td><td>編集 ・ リンクをコピー</td></tr>
+    <tr><td>佐藤さん</td><td>10/19–10/31</td><td><span class="badge" style="background:#eaf7ee">確定済み</span></td><td>編集 ・ リンクをコピー</td></tr>
+  </table>
+</div>
+
+<!-- ================= GUEST ================= -->
+<div class="view" id="guest">
+  <h1>日程調整<span class="with">with</span><span class="name">下野</span></h1>
+  <div class="sub">山田さん向け ・ 10月26日(月) – 11月8日(日)　<b>‹ 前の週　次の週 ›</b></div>
+  <div class="legend" id="legendG"></div>
+  <div class="wrap">
+    <div class="gridbox"><div class="grid" id="gridG"></div></div>
+    <div class="side">
+      <h3>選んだ時間</h3>
+      <div class="sellist" id="sellist"><span style="color:#999">色のついた枠をドラッグして選んでください。何か所でも選べます。</span></div>
+      <label>お名前<input placeholder="山田"></label>
+      <label>メールアドレス<input placeholder="確定のお知らせを送ります"></label>
+      <label>ご用件<textarea rows="3" placeholder="数学の授業 2時間 など"></textarea></label>
+      <button class="btn">この時間で申請する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const P={'◎':['#22a447','#fff'],'○':['#b8e35a','#2c4a05'],'△':['#ff9f2e','#fff'],'×':['#ff6b5e','#fff']};
+const LABEL={'◎':'空いています','○':'空き・前後に予定','△':'相談可・未定','×':'不可'};
+const days=['26 月','27 火','28 水','29 木','30 金','31 土','1 日'];
+const START=17,END=22;const rows=[];for(let h=START;h<END;h++){rows.push(h+':00');rows.push(h+':30')}
+const tOf=r=>START+r/2;
+function auto(d,r){const t=tOf(r);
+  if(d===6)return['×','終日：旅行'];
+  if((d===1||d===3)&&t>=17.5&&t<21.5)return['×',t>=18&&t<21?'バイト':''];
+  if(d===2&&t>=19&&t<21)return['△','DL講座'];
+  if(d===2&&(t>=18.5&&t<19||t>=21&&t<21.5))return['○',''];
+  if(d<5&&t<17)return['×','大学'];
+  return['◎',''];}
+const over={};let brush='×';const daysOn=[1,1,1,1,1,1,0];
+function stat(d,r){const k=d+'-'+r;return over[k]||auto(d,r)[0]}
+function legend(id){document.getElementById(id).innerHTML=Object.entries(P).map(([s,[bg,fg]])=>`<span class="pill" style="background:${bg};color:${fg}">${s} ${LABEL[s]}</span>`).join('')}
+function head(){return'<div></div>'+days.map((d,i)=>{const[n,w]=d.split(' ');return`<div class="h">${n}<small>${w}</small></div>`}).join('')}
+function renderA(){let h=head();rows.forEach((l,r)=>{h+=`<div class="t">${r%2?'':l}</div>`;for(let d=0;d<7;d++){
+  if(!daysOn[d]){h+=`<div class="c off" data-k="${d}-${r}"></div>`;continue}
+  const s=stat(d,r),[bg,fg]=P[s],ev=auto(d,r)[1],ov=over[d+'-'+r]?'ov':'';
+  h+=`<div class="c ${ov}" data-k="${d}-${r}" style="background:${bg};color:${fg}" title="${ev}">${ev&&!over[d+'-'+r]?`<span class="ev">${ev}</span>`:s}</div>`}});gridA.innerHTML=h}
+const sel=new Set();
+function renderG(){let h=head();rows.forEach((l,r)=>{h+=`<div class="t">${r%2?'':l}</div>`;for(let d=0;d<7;d++){
+  if(!daysOn[d]){h+=`<div class="c off"></div>`;continue}
+  const s=stat(d,r),[bg,fg]=P[s];h+=`<div class="c ${s==='×'?'x':''} ${sel.has(d+'-'+r)?'sel':''}" data-k="${d}-${r}" data-s="${s}" style="background:${bg};color:${fg}">${s}</div>`}});gridG.innerHTML=h;list()}
+function list(){const by={};[...sel].forEach(k=>{const[d,r]=k.split('-').map(Number);(by[d]=by[d]||[]).push(r)});const out=[];
+  const f=x=>{const m=START*60+x*30;return Math.floor(m/60)+':'+(m%60?'30':'00')};
+  Object.keys(by).sort((a,b)=>a-b).forEach(d=>{const rs=by[d].sort((a,b)=>a-b);let s=rs[0],p=rs[0];const[n,w]=days[d].split(' ');const push=()=>out.push(`<span class="slot">${n}日(${w}) ${f(s)}–${f(p+1)}</span>`);
+    for(let i=1;i<rs.length;i++){if(rs[i]===p+1)p=rs[i];else{push();s=p=rs[i]}}push()});
+  if(out.length)sellist.innerHTML=out.join('<br>')}
+// brushes
+const BR=[['×','×でブロック'],['△','△にする'],['◎','◎にする'],['reset','自動に戻す']];
+brushes.innerHTML=BR.map(([k,l])=>{const c=P[k];return`<button class="brush ${k===brush?'on':''}" data-b="${k}" style="${c?`background:${c[0]};color:${c[1]}`:''}">${l}</button>`}).join('');
+brushes.onclick=e=>{const b=e.target.closest('.brush');if(!b)return;brush=b.dataset.b;brushes.querySelectorAll('.brush').forEach(x=>x.classList.toggle('on',x===b))};
+const DN=['月','火','水','木','金','土','日'];
+function renderDays(){document.getElementById('days').innerHTML=DN.map((n,i)=>`<span class="${daysOn[[0,1,2,3,4,5,6][i]]?'on':''}" data-i="${i}">${n}</span>`).join('')}
+document.getElementById('days').onclick=e=>{const s=e.target.closest('span');if(!s)return;const i=+s.dataset.i;daysOn[i]=daysOn[i]?0:1;renderDays();renderA();renderG()};
+// drag painting (admin)
+let dragA=null;
+gridA.addEventListener('mousedown',e=>{const c=e.target.closest('.c');if(!c||c.classList.contains('off'))return;dragA={d:+c.dataset.k.split('-')[0],r0:+c.dataset.k.split('-')[1]};paint(c);e.preventDefault()});
+gridA.addEventListener('mouseover',e=>{if(!dragA)return;const c=e.target.closest('.c');if(c)paint(c)});
+function paint(c){const[d,r]=c.dataset.k.split('-').map(Number);if(d!==dragA.d)return;const a=Math.min(r,dragA.r0),b=Math.max(r,dragA.r0);
+  for(let i=a;i<=b;i++){const k=d+'-'+i;if(brush==='reset')delete over[k];else over[k]=brush}renderA();renderG()}
+// drag select (guest)
+let dragG=null;
+gridG.addEventListener('mousedown',e=>{const c=e.target.closest('.c');if(!c||c.dataset.s==='×'||!c.dataset.s)return;const[d,r]=c.dataset.k.split('-').map(Number);dragG={d,r0:r,add:!sel.has(c.dataset.k)};sp(c);e.preventDefault()});
+gridG.addEventListener('mouseover',e=>{if(!dragG)return;const c=e.target.closest('.c');if(c&&c.dataset.k)sp(c)});
+function sp(c){const[d,r]=c.dataset.k.split('-').map(Number);if(d!==dragG.d)return;const a=Math.min(r,dragG.r0),b=Math.max(r,dragG.r0);
+  for(let i=a;i<=b;i++){if(stat(d,i)==='×')continue;const k=d+'-'+i;dragG.add?sel.add(k):sel.delete(k)}renderG()}
+document.addEventListener('mouseup',()=>{dragA=null;dragG=null});
+function show(id,b){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id===id));document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b))}
+legend('legendA');legend('legendG');renderDays();renderA();renderG();
+</script>
+</body></html>

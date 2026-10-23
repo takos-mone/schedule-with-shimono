@@ -1,0 +1,11 @@
+{
+  "name": "schedule-with-shimono",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "deploy": "node scripts/deploy.mjs"
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2"
+  }
+}
