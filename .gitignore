@@ -4,3 +4,5 @@ node_modules/
 .superpowers/
 gas/slots.js
 .DS_Store
+gas/Env.js
+gas/SlotsClient.html
