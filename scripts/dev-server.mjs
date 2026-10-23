@@ -57,7 +57,7 @@ http.createServer((req, res) => {
       function runner(ok, ng) { return new Proxy({}, { get: (_, k) => k === 'withSuccessHandler' ? (f) => runner(f, ng) : k === 'withFailureHandler' ? (f) => runner(ok, f)
         : (...args) => fetch('/rpc', { method: 'POST', body: JSON.stringify({ fn: k, args }) }).then((r) => r.json()).then((r) => r.ok ? ok && ok(r.value) : ng && ng(new Error(r.error))) }); }
       window.google = { script: { run: runner() } };</script>`;
-    let html = fs.readFileSync(path.join(root, 'gas/Admin.html'), 'utf8')
+    let html = fs.readFileSync(path.join(root, 'gas/AdminPage.html'), 'utf8')
       .replace("<?!= include_('SlotsClient') ?>", shim + '<script src="/slots.js"></script>')
       .replace('<?= params ?>', JSON.stringify(JSON.stringify({ mode: url.searchParams.get('mode') || 'home', req: url.searchParams.get('req') || '', type: url.searchParams.get('type') || '' })));
     return send(res, 200, html, types['.html']);

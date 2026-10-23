@@ -3,7 +3,7 @@
 var DEFAULT_LINK = { dayStart: 17 * 60, dayEnd: 22 * 60, weekdays: '1111110', slotMinutes: 30 };
 
 function adminPage_(params) {
-  var t = HtmlService.createTemplateFromFile('Admin');
+  var t = HtmlService.createTemplateFromFile('AdminPage');
   t.params = JSON.stringify(params);
   return t.evaluate()
     .setTitle('日程調整 管理')
