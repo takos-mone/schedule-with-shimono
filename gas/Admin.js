@@ -96,6 +96,8 @@ function normalizeLink_(d) {
     slotMinutes: [15, 30, 60].indexOf(Number(d.slotMinutes)) >= 0 ? Number(d.slotMinutes) : 30,
     overrides: {},
     active: d.active !== false,
+    archived: !!d.archived,
+    archivedAt: d.archivedAt || 0,
     createdAt: d.createdAt || Date.now(),
   };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(link.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(link.endDate)) throw new Error('期間が正しくありません');
@@ -127,6 +129,21 @@ function adminSetActive(id, active) {
     var link = getLink_(id);
     if (!link) throw new Error('リンクが見つかりません');
     link.active = !!active;
+    saveLink_(link);
+    bumpVersion_();
+    return true;
+  });
+}
+
+// Completing a link stops it for guests and moves it to 過去の日程調整; restoring reopens it.
+function adminSetArchived(id, archived) {
+  assertOwner_();
+  return withLock_(function () {
+    var link = getLink_(id);
+    if (!link) throw new Error('リンクが見つかりません');
+    link.archived = !!archived;
+    link.archivedAt = archived ? Date.now() : 0;
+    link.active = !archived;
     saveLink_(link);
     bumpVersion_();
     return true;

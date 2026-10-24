@@ -229,3 +229,20 @@ test('one email approve link approves every range; notes travel to mail and even
   const st = env.ctx.adminGetState();
   assert.equal(st.requests[0].note, '駅前で');
 });
+
+test('completing a link closes it for guests; restoring reopens it', () => {
+  const env = setupEnv();
+  const link = newLink(env);
+  env.ctx.adminSetArchived(link.id, true);
+  let l = env.ctx.adminGetState().links.find((x) => x.id === link.id);
+  assert.equal(l.archived, true);
+  assert.equal(l.active, false);
+  env.setActive('');
+  assert.equal(get(env, { action: 'availability', l: link.id }).error, 'closed');
+  assert.throws(() => env.ctx.adminSetArchived(link.id, false), /forbidden/);
+  env.setActive('owner@example.com');
+  env.ctx.adminSetArchived(link.id, false);
+  l = env.ctx.adminGetState().links.find((x) => x.id === link.id);
+  assert.equal(l.archived, false);
+  assert.equal(get(env, { action: 'availability', l: link.id }).ok, true);
+});

@@ -88,7 +88,7 @@
   .pop .x{position:absolute;top:4px;right:6px;border:0;background:none;font-size:18px;cursor:pointer;color:var(--sub)}
   .resets{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
   .resets .btn{font-size:12px;padding:5px 9px}
-  .resets .btn.armed{background:var(--r);color:#fff}
+  .btn.armed{background:var(--r)!important;color:#fff!important}
   .pop .e{padding:6px 0;border-bottom:1px solid var(--line)}
   .pop .e:last-child{border:0}
   table.rules{border-collapse:collapse;width:100%}
@@ -105,12 +105,14 @@
     <button data-tab="links" class="on">リンク一覧</button>
     <button data-tab="edit">リンク作成・編集</button>
     <button data-tab="rules">カレンダー設定</button>
+    <button data-tab="past">過去の日程調整</button>
   </nav>
 </header>
 <main>
   <section id="tab-links"><div class="loading">読み込み中…</div></section>
   <section id="tab-edit" class="hidden"></section>
   <section id="tab-rules" class="hidden"></section>
+  <section id="tab-past" class="hidden"></section>
 </main>
 <div class="toast" id="toast"></div>
 
@@ -151,7 +153,7 @@ function weekdayIndex(date) { return (new Date(Slots.jstMidnight(date) + Slots.J
 
 function showTab(name) {
   [].forEach.call(document.querySelectorAll('#nav button'), function (b) { b.classList.toggle('on', b.dataset.tab === name); });
-  ['links', 'edit', 'rules'].forEach(function (t) { $('tab-' + t).classList.toggle('hidden', t !== name); });
+  ['links', 'edit', 'rules', 'past'].forEach(function (t) { $('tab-' + t).classList.toggle('hidden', t !== name); });
 }
 $('nav').onclick = function (e) {
   var b = e.target.closest('button'); if (!b) return;
@@ -159,6 +161,7 @@ $('nav').onclick = function (e) {
   showTab(b.dataset.tab);
   if (b.dataset.tab === 'edit') renderEditor();
   if (b.dataset.tab === 'rules') renderRules();
+  if (b.dataset.tab === 'past') renderPast();
 };
 
 function load() {
@@ -166,11 +169,25 @@ function load() {
 }
 
 // ================= リンク一覧 =================
+function pendingCount(l) {
+  var n = 0;
+  S.requests.forEach(function (r) { if (r.linkId === l.id) r.ranges.forEach(function (x) { if (x.status === 'pending') n++; }); });
+  return n;
+}
+
+// Completed = marked 完了 by hand, or the period is over and nothing is waiting for an answer.
+function isPast(l) {
+  return !!l.archived || (l.endDate < todayStr() && pendingCount(l) === 0);
+}
+
 function renderLinks() {
-  var h = '<div class="row" style="margin-bottom:14px"><span class="muted">相手ごとのリンクと、届いた申請です。</span><span class="sp"></span>'
+  var current = S.links.filter(function (l) { return !isPast(l); });
+  var pastN = S.links.length - current.length;
+  var h = '<div class="row" style="margin-bottom:14px"><span class="muted">進行中の日程調整と、届いた申請です。'
+    + (pastN ? '完了したもの（' + pastN + '件）は「過去の日程調整」にあります。' : '') + '</span><span class="sp"></span>'
     + '<button class="btn dark" data-act="new">＋ 新しいリンク</button></div>';
-  if (!S.links.length) h += '<p class="muted">まだリンクがありません。「＋ 新しいリンク」から作成してください。</p>';
-  S.links.slice().sort(function (a, b) { return b.createdAt - a.createdAt; }).forEach(function (l) {
+  if (!current.length) h += '<p class="muted">進行中のリンクはありません。「＋ 新しいリンク」から作成してください。</p>';
+  current.sort(function (a, b) { return b.createdAt - a.createdAt; }).forEach(function (l) {
     var reqs = S.requests.filter(function (r) { return r.linkId === l.id; });
     var pend = 0, ok = 0;
     reqs.forEach(function (r) { r.ranges.forEach(function (x) { if (x.status === 'pending') pend++; if (x.status === 'approved') ok++; }); });
@@ -180,7 +197,8 @@ function renderLinks() {
     h += '<div class="card" data-link="' + l.id + '"><div class="row"><b class="round" style="font-size:16px">' + esc(l.name) + '</b>' + badge + '<span class="sp"></span>'
       + '<button class="btn" data-act="edit">編集</button>'
       + '<button class="btn" data-act="copy">リンクをコピー</button>'
-      + '<button class="btn" data-act="toggle">' + (l.active ? '停止' : '再開') + '</button></div>'
+      + '<button class="btn" data-act="toggle">' + (l.active ? '停止' : '再開') + '</button>'
+      + '<button class="btn dark" data-act="archive">完了にする</button></div>'
       + '<div class="muted" style="margin-top:4px">' + l.startDate + ' 〜 ' + l.endDate + '　' + minToHHMM(l.dayStart) + '–' + minToHHMM(l.dayEnd)
       + '　' + WD.filter(function (_, i) { return l.weekdays[i] === '1'; }).join('') + '　' + l.slotMinutes + '分単位</div>'
       + '<input class="url" readonly value="' + esc(guestUrl(l)) + '">';
@@ -190,7 +208,7 @@ function renderLinks() {
   $('tab-links').innerHTML = h;
 }
 
-function renderRequest(r) {
+function renderRequest(r, readonly) {
   var h = '<div class="req" data-req="' + r.requestId + '"><div class="row"><b>' + esc(r.name) + '</b><span class="muted">' + esc(r.email) + '</span><span class="sp"></span>'
     + '<span class="muted">' + new Date(r.createdAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) + '</span></div>';
   if (r.message) h += '<div style="margin:4px 0;white-space:pre-wrap"><span class="muted">ご用件：</span>' + esc(r.message) + '</div>';
@@ -198,7 +216,8 @@ function renderRequest(r) {
   r.ranges.forEach(function (x) {
     var st = x.status === 'pending' ? '' : x.status === 'approved' ? '<span class="badge b-ok">承認済み</span>' : '<span class="badge b-rej">却下</span>';
     h += '<div class="range" data-range="' + x.id + '"><b>' + esc(x.label) + '</b>' + st;
-    if (x.status === 'pending') {
+    if (readonly && x.status === 'pending') h += '<span class="badge b-pend">未対応</span>';
+    if (!readonly && x.status === 'pending') {
       h += '<span class="muted">時刻を調整:</span><input type="time" step="1800" data-k="s" value="' + minToInput(msToMinOfDay(x.start)) + '">–'
         + '<input type="time" step="1800" data-k="e" value="' + minToInput(msToMinOfDay(x.end)) + '">'
         + '<button class="btn go" data-act="approve">承認</button>';
@@ -206,6 +225,7 @@ function renderRequest(r) {
     h += '</div>';
   });
   var anyPending = r.ranges.some(function (x) { return x.status === 'pending'; });
+  if (readonly) return h + '</div>';
   var pendingCount = r.ranges.filter(function (x) { return x.status === 'pending'; }).length;
   h += '<div class="row" style="margin-top:6px">' + (pendingCount > 1 ? '<button class="btn go" data-act="approve-all">すべて承認</button>' : '')
     + '<button class="btn warn" data-act="modify">修正を提案</button>'
@@ -237,6 +257,12 @@ $('tab-links').onclick = function (e) {
   if (act === 'edit') { draft = JSON.parse(JSON.stringify(link)); page = -1; showTab('edit'); renderEditor(); }
   if (act === 'copy') copyText(card.querySelector('.url'));
   if (act === 'toggle') { busy(b, true); call('adminSetActive', link.id, !link.active).then(load); }
+  if (act === 'archive') {
+    armed(b, '完了にする', function () {
+      busy(b, true);
+      call('adminSetArchived', link.id, true).then(function () { toast('「過去の日程調整」に移しました（リンクは停止）'); return load(); });
+    }, 'もう一度押すと完了');
+  }
   if (act === 'approve') {
     var rg = b.closest('[data-range]');
     var r = S.requests.filter(function (x) { return x.requestId === reqEl.dataset.req; })[0];
@@ -274,6 +300,37 @@ function copyText(input) {
   if (navigator.clipboard) navigator.clipboard.writeText(input.value).then(done, function () { document.execCommand('copy'); done(); });
   else { document.execCommand('copy'); done(); }
 }
+
+// ================= 過去の日程調整 =================
+function renderPast() {
+  var past = S.links.filter(isPast).sort(function (a, b) { return (b.archivedAt || Slots.jstMidnight(b.endDate)) - (a.archivedAt || Slots.jstMidnight(a.endDate)); });
+  var h = '<p class="muted">完了した日程調整の記録です（相手のリンクは使えません）。「完了にする」を押したもの、または期間が終わって未対応の申請がないものがここに入ります。</p>';
+  if (!past.length) h += '<p class="muted">まだありません。</p>';
+  past.forEach(function (l) {
+    var reqs = S.requests.filter(function (r) { return r.linkId === l.id; });
+    var ok = 0; reqs.forEach(function (r) { r.ranges.forEach(function (x) { if (x.status === 'approved') ok++; }); });
+    var why = l.archived ? '完了 ' + new Date(l.archivedAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '期間終了';
+    h += '<div class="card" data-link="' + l.id + '" style="border-color:#c7c7cc"><div class="row"><b class="round">' + esc(l.name) + '</b>'
+      + '<span class="badge b-off">' + why + '</span><span class="badge b-ok">確定 ' + ok + '件</span><span class="sp"></span>'
+      + (l.archived ? '<button class="btn" data-act="restore">一覧に戻す</button>' : '<button class="btn" data-act="edit">期間を延ばす</button>') + '</div>'
+      + '<div class="muted" style="margin-top:4px">' + l.startDate + ' 〜 ' + l.endDate + '　' + minToHHMM(l.dayStart) + '–' + minToHHMM(l.dayEnd) + '</div>';
+    if (!reqs.length) h += '<div class="muted" style="margin-top:8px">申請はありませんでした。</div>';
+    reqs.forEach(function (r) { h += renderRequest(r, true); });
+    h += '</div>';
+  });
+  $('tab-past').innerHTML = h;
+}
+
+$('tab-past').onclick = function (e) {
+  var b = e.target.closest('[data-act]'); if (!b) return;
+  var card = b.closest('[data-link]');
+  var link = S.links.filter(function (l) { return l.id === card.dataset.link; })[0];
+  if (b.dataset.act === 'restore') {
+    busy(b, true);
+    call('adminSetArchived', link.id, false).then(function () { toast('リンク一覧に戻しました（リンクも再開）'); return load().then(renderPast); });
+  }
+  if (b.dataset.act === 'edit') { draft = JSON.parse(JSON.stringify(link)); page = -1; showTab('edit'); renderEditor(); }
+};
 
 // ================= リンク作成・編集 =================
 function newDraft() {
@@ -563,9 +620,9 @@ function updateOverrideCount() {
 }
 
 // Two-step confirm: first click arms the button, second click within 4s runs.
-function armed(btn, label, run) {
+function armed(btn, label, run, armedText) {
   if (btn.classList.contains('armed')) { btn.classList.remove('armed'); btn.textContent = label; run(); return; }
-  btn.classList.add('armed'); btn.textContent = 'もう一度押すとリセット';
+  btn.classList.add('armed'); btn.textContent = armedText || 'もう一度押すとリセット';
   setTimeout(function () { btn.classList.remove('armed'); btn.textContent = label; }, 4000);
 }
 
