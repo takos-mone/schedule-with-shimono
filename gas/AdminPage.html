@@ -169,6 +169,22 @@ function load() {
 }
 
 // ================= リンク一覧 =================
+// "月〜金 17:00–22:00 / 土日 9:00–22:00": consecutive weekdays with the same range are grouped.
+function rangeSummary(l) {
+  var groups = [];
+  WD.forEach(function (w, i) {
+    var r = Slots.rangeForDay(l, i);
+    if (!r) return;
+    var key = r.start + '-' + r.end, g = groups[groups.length - 1];
+    if (g && g.key === key && g.last === i - 1) { g.days.push(w); g.last = i; }
+    else groups.push({ key: key, days: [w], last: i, r: r });
+  });
+  return groups.map(function (g) {
+    var days = g.days.length > 2 ? g.days[0] + '〜' + g.days[g.days.length - 1] : g.days.join('');
+    return days + ' ' + minToHHMM(g.r.start) + '–' + minToHHMM(g.r.end);
+  }).join(' / ');
+}
+
 function pendingCount(l) {
   var n = 0;
   S.requests.forEach(function (r) { if (r.linkId === l.id) r.ranges.forEach(function (x) { if (x.status === 'pending') n++; }); });
@@ -199,8 +215,7 @@ function renderLinks() {
       + '<button class="btn" data-act="copy">リンクをコピー</button>'
       + '<button class="btn" data-act="toggle">' + (l.active ? '停止' : '再開') + '</button>'
       + '<button class="btn dark" data-act="archive">完了にする</button></div>'
-      + '<div class="muted" style="margin-top:4px">' + l.startDate + ' 〜 ' + l.endDate + '　' + minToHHMM(l.dayStart) + '–' + minToHHMM(l.dayEnd)
-      + '　' + WD.filter(function (_, i) { return l.weekdays[i] === '1'; }).join('') + '　' + l.slotMinutes + '分単位　追加先：' + esc(l.targetCalendarName || '日程調整') + '</div>'
+      + '<div class="muted" style="margin-top:4px">' + l.startDate + ' 〜 ' + l.endDate + '　' + rangeSummary(l) + '　' + l.slotMinutes + '分単位　追加先：' + esc(l.targetCalendarName || '日程調整') + '</div>'
       + '<input class="url" readonly value="' + esc(guestUrl(l)) + '">';
     reqs.forEach(function (r) { h += renderRequest(r); });
     h += '</div>';
@@ -313,7 +328,7 @@ function renderPast() {
     h += '<div class="card" data-link="' + l.id + '" style="border-color:#c7c7cc"><div class="row"><b class="round">' + esc(l.name) + '</b>'
       + '<span class="badge b-off">' + why + '</span><span class="badge b-ok">確定 ' + ok + '件</span><span class="sp"></span>'
       + (l.archived ? '<button class="btn" data-act="restore">一覧に戻す</button>' : '<button class="btn" data-act="edit">期間を延ばす</button>') + '</div>'
-      + '<div class="muted" style="margin-top:4px">' + l.startDate + ' 〜 ' + l.endDate + '　' + minToHHMM(l.dayStart) + '–' + minToHHMM(l.dayEnd) + '</div>';
+      + '<div class="muted" style="margin-top:4px">' + l.startDate + ' 〜 ' + l.endDate + '　' + rangeSummary(l) + '</div>';
     if (!reqs.length) h += '<div class="muted" style="margin-top:8px">申請はありませんでした。</div>';
     reqs.forEach(function (r) { h += renderRequest(r, true); });
     h += '</div>';
@@ -340,6 +355,24 @@ function newDraft() {
   page = -1;
 }
 
+// Detailed mode rows: one per weekday with on/off and its own range.
+function dayRangeRows(d) {
+  return '<table class="dr" style="margin-top:6px;border-collapse:collapse">' + WD.map(function (w, i) {
+    var r = Slots.rangeForDay(d, i);
+    var base = r || { start: d.dayStart, end: d.dayEnd };
+    return '<tr data-i="' + i + '"><td style="padding:3px 6px 3px 0"><label style="white-space:nowrap"><input type="checkbox" class="dr-on"' + (r ? ' checked' : '') + '> ' + w + '</label></td>'
+      + '<td><select class="dr-s"' + (r ? '' : ' disabled') + '>' + timeOptions(base.start) + '</select>〜<select class="dr-e"' + (r ? '' : ' disabled') + '>' + timeOptions(base.end) + '</select></td></tr>';
+  }).join('') + '</table>'
+    + '<div class="row" style="margin-top:4px"><button type="button" class="btn" id="dr-copy" style="font-size:12px;padding:4px 8px">月曜の時間を平日にコピー</button></div>';
+}
+
+function readDayRanges() {
+  return [].map.call(document.querySelectorAll('table.dr tr'), function (tr) {
+    if (!tr.querySelector('.dr-on').checked) return null;
+    return { start: Number(tr.querySelector('.dr-s').value), end: Number(tr.querySelector('.dr-e').value) };
+  });
+}
+
 function timeOptions(sel) {
   var h = '';
   for (var m = 0; m <= 1440; m += 30) h += '<option value="' + m + '"' + (m === sel ? ' selected' : '') + '>' + minToHHMM(m) + '</option>';
@@ -357,8 +390,11 @@ function renderEditor() {
     + '<label class="f">相手の名前（相手のページに表示）<input id="f-name" style="width:100%" value="' + esc(d.name) + '"></label>'
     + '<h3 style="margin:16px 0 4px">2. 相手に見せる範囲</h3>'
     + '<label class="f">期間<div class="row"><input type="date" id="f-start" value="' + d.startDate + '">〜<input type="date" id="f-end" value="' + d.endDate + '"></div></label>'
+    + '<div id="simple-range"' + (d.dayRanges ? ' class="hidden"' : '') + '>'
     + '<label class="f">相手に見せる時間帯<div class="row"><select id="f-ds">' + timeOptions(d.dayStart) + '</select>〜<select id="f-de">' + timeOptions(d.dayEnd) + '</select></div></label>'
-    + '<label class="f">曜日<div class="days" id="f-wd">' + WD.map(function (w, i) { return '<span data-i="' + i + '" class="' + (d.weekdays[i] === '1' ? 'on' : '') + '">' + w + '</span>'; }).join('') + '</div></label>'
+    + '<label class="f">曜日<div class="days" id="f-wd">' + WD.map(function (w, i) { return '<span data-i="' + i + '" class="' + (d.weekdays[i] === '1' ? 'on' : '') + '">' + w + '</span>'; }).join('') + '</div></label></div>'
+    + '<label class="f" style="font-weight:500"><input type="checkbox" id="f-detail"' + (d.dayRanges ? ' checked' : '') + '> 曜日ごとに時間帯を設定する（詳細）</label>'
+    + '<div id="detail-range"' + (d.dayRanges ? '' : ' class="hidden"') + '>' + dayRangeRows(d) + '</div>'
     + '<label class="f">相手が選べる枠の長さ<select id="f-slot"><option value="15"' + (d.slotMinutes === 15 ? ' selected' : '') + '>15分</option><option value="30"' + (d.slotMinutes === 30 ? ' selected' : '') + '>30分</option><option value="60"' + (d.slotMinutes === 60 ? ' selected' : '') + '>1時間</option></select></label>'
     + '<h3 style="margin:16px 0 4px">3. 承認した予定の追加先</h3>'
     + '<label class="f">マイカレンダー<select id="f-target" style="width:100%"><option value="">「日程調整」カレンダー（既定）</option></select></label>'
@@ -404,6 +440,7 @@ function readForm() {
   draft.startDate = $('f-start').value;
   draft.endDate = $('f-end').value;
   draft.dayStart = Number($('f-ds').value);
+  draft.dayRanges = $('f-detail').checked ? readDayRanges() : null;
   draft.dayEnd = Number($('f-de').value);
   draft.slotMinutes = Number($('f-slot').value);
   var t = $('f-target');
@@ -454,7 +491,10 @@ function symbolFor(start) {
 // Guest-visible slot (start of its slot) containing the 30-min editor row at ms, or null.
 function slotStartAt(ms) {
   var step = draft.slotMinutes * 60000;
-  var base = Slots.jstMidnight(Slots.jstDateString(ms)) + draft.dayStart * 60000;
+  var date = Slots.jstDateString(ms);
+  var r = Slots.rangeForDay(draft, weekdayIndex(date));
+  if (!r) return null;
+  var base = Slots.jstMidnight(date) + r.start * 60000;
   var s = base + Math.floor((ms - base) / step) * step;
   return symbolBy[s] ? s : null;
 }
@@ -465,7 +505,7 @@ function renderWeek() {
   $('range-label').textContent = monday.slice(5).replace('-', '/') + ' – ' + days[6].slice(5).replace('-', '/');
   $('prev').disabled = page === 0; $('next').disabled = page >= weeks.length - 1;
   var cols = '44px repeat(7,minmax(0,1fr))';
-  var inRange = function (d) { return d >= draft.startDate && d <= draft.endDate && draft.weekdays[weekdayIndex(d)] === '1'; };
+  var inRange = function (d) { return d >= draft.startDate && d <= draft.endDate && !!Slots.rangeForDay(draft, weekdayIndex(d)); };
   var dayEvents = function (d) {
     var a = Slots.jstMidnight(d), z = a + DAY;
     return calData.events.map(function (e, i) { e.i = i; return e; }).filter(function (e) { return e.start < z && a < e.end; });
@@ -543,10 +583,41 @@ function eventDetail(e) {
     + (e.description ? '<div style="white-space:pre-wrap;margin-top:4px">' + esc(e.description) + '</div>' : '') + '</div>';
 }
 
+function bindDayRanges() {
+  var box = $('detail-range');
+  box.onchange = function (e) {
+    var tr = e.target.closest('tr');
+    if (tr && e.target.classList.contains('dr-on')) {
+      tr.querySelector('.dr-s').disabled = tr.querySelector('.dr-e').disabled = !e.target.checked;
+    }
+    readForm(); recompute();
+  };
+  box.onclick = function (e) {
+    if (e.target.id !== 'dr-copy') return;
+    var rows = box.querySelectorAll('table.dr tr');
+    var s = rows[0].querySelector('.dr-s').value, en = rows[0].querySelector('.dr-e').value, on = rows[0].querySelector('.dr-on').checked;
+    for (var i = 1; i < 5; i++) {
+      rows[i].querySelector('.dr-on').checked = on;
+      rows[i].querySelector('.dr-s').value = s; rows[i].querySelector('.dr-e').value = en;
+      rows[i].querySelector('.dr-s').disabled = rows[i].querySelector('.dr-e').disabled = !on;
+    }
+    readForm(); recompute();
+  };
+}
+
 function bindEditor() {
   ['f-start', 'f-end'].forEach(function (id) { $(id).onchange = function () { readForm(); page = -1; ensureData(false).then(recompute); }; });
   ['f-ds', 'f-de', 'f-slot'].forEach(function (id) { $(id).onchange = function () { readForm(); recompute(); }; });
   $('f-name').oninput = readForm;
+  $('f-detail').onchange = function () {
+    var on = this.checked;
+    readForm();
+    if (on) { draft.dayRanges = WD.map(function (_, i) { return Slots.rangeForDay(Object.assign({}, draft, { dayRanges: null }), i); }); $('detail-range').innerHTML = dayRangeRows(draft); bindDayRanges(); }
+    $('simple-range').classList.toggle('hidden', on);
+    $('detail-range').classList.toggle('hidden', !on);
+    readForm(); recompute();
+  };
+  bindDayRanges();
   $('f-wd').onclick = function (e) {
     var s = e.target.closest('span'); if (!s) return;
     var w = draft.weekdays.split(''); var i = Number(s.dataset.i);

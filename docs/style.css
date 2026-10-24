@@ -59,3 +59,4 @@ footer { margin-top: 32px; color: #aaa; font-size: 11px; }
 }
 .grid.q .c { height: 16px; font-size: 10px; }
 .grid.q .gt { line-height: 16px; }
+.gap { height: 6px; border-top: 1.5px dashed #c7c7cc; margin-top: 4px; }

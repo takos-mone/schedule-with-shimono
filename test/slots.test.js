@@ -108,3 +108,25 @@ test('formatRange and jstDateString', () => {
   assert.equal(Slots.formatRange(r), '10/28(水) 17:00–19:30');
   assert.equal(Slots.jstDateString(jst('2026-10-28', '23:30')), '2026-10-28');
 });
+
+test('generateSlots: per-weekday ranges override dayStart/dayEnd and weekdays', () => {
+  // 2026-10-30 is Friday, 10-31 Saturday, 11-01 Sunday
+  const slots = Slots.generateSlots(link({
+    startDate: '2026-10-30', endDate: '2026-11-01', slotMinutes: 60,
+    dayRanges: [
+      { start: 17 * 60, end: 19 * 60 }, { start: 17 * 60, end: 19 * 60 }, { start: 17 * 60, end: 19 * 60 },
+      { start: 17 * 60, end: 19 * 60 }, { start: 17 * 60, end: 19 * 60 },
+      { start: 9 * 60, end: 12 * 60 }, null,
+    ],
+  }));
+  assert.deepEqual(slots.map((s) => [s.date, Slots.hhmm(s.start)]), [
+    ['2026-10-30', '17:00'], ['2026-10-30', '18:00'],
+    ['2026-10-31', '9:00'], ['2026-10-31', '10:00'], ['2026-10-31', '11:00'],
+  ]);
+});
+
+test('rangeForDay falls back to the simple setting', () => {
+  const simple = link({ weekdays: '1111100' });
+  assert.deepEqual(Slots.rangeForDay(simple, 0), { start: 17 * 60, end: 19 * 60 });
+  assert.equal(Slots.rangeForDay(simple, 6), null);
+});

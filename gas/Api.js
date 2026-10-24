@@ -45,7 +45,8 @@ function doPost(e) {
 function publicLink_(link) {
   return {
     name: link.name, startDate: link.startDate, endDate: link.endDate,
-    dayStart: link.dayStart, dayEnd: link.dayEnd, weekdays: link.weekdays, slotMinutes: link.slotMinutes,
+    dayStart: link.dayStart, dayEnd: link.dayEnd, weekdays: link.weekdays, dayRanges: link.dayRanges || null,
+    slotMinutes: link.slotMinutes,
   };
 }
 

@@ -262,3 +262,17 @@ test('approved events go to the calendar chosen on the link', () => {
   const cals = env.ctx.adminListCalendars();
   assert.equal(cals.find((c) => c.id === 'someone@gmail.com').owned, false);
 });
+
+test('per-weekday ranges: weekdays evening, weekend all day', () => {
+  const env = setupEnv();
+  const wk = { start: 17 * 60, end: 22 * 60 }, we = { start: 9 * 60, end: 22 * 60 };
+  const link = newLink(env, { startDate: '2026-10-30', endDate: '2026-11-01', dayRanges: [wk, wk, wk, wk, wk, we, we] });
+  assert.equal(link.dayStart, 9 * 60);
+  assert.equal(link.weekdays, '1111111');
+  const res = get(env, { action: 'availability', l: link.id });
+  const fri = res.slots.filter((x) => x.s < jst('2026-10-31', '00:00'));
+  assert.equal(fri.length, 10);
+  assert.ok(res.slots.some((x) => x.s === jst('2026-10-31', '09:00')));
+  assert.ok(!res.slots.some((x) => x.s === jst('2026-10-30', '09:00')));
+  assert.throws(() => newLink(env, { dayRanges: [null, null, null, null, null, null, null] }), /1つ以上/);
+});

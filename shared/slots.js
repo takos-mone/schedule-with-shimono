@@ -34,6 +34,13 @@ var Slots = (function () {
     return p.m + '/' + p.d + '(' + WEEKDAY_JA[p.wd] + ') ' + hhmm(r.start) + '–' + hhmm(r.end);
   }
 
+  // Visible time range ({start,end} in minutes) for a weekday (Mon = 0), or null when hidden.
+  // link.dayRanges (7 entries, null = hidden) takes precedence over dayStart/dayEnd + weekdays.
+  function rangeForDay(link, maskIndex) {
+    if (link.dayRanges && link.dayRanges.length === 7) return link.dayRanges[maskIndex] || null;
+    return link.weekdays.charAt(maskIndex) === '1' ? { start: link.dayStart, end: link.dayEnd } : null;
+  }
+
   // weekdays: 7-char mask Mon..Sun, '1' = shown.
   function generateSlots(link) {
     var out = [];
@@ -42,10 +49,10 @@ var Slots = (function () {
     var last = jstMidnight(link.endDate);
     for (var day = first; day <= last; day += DAY) {
       var wd = jstParts(day).wd; // 0 = Sun
-      var maskIndex = (wd + 6) % 7; // Mon = 0
-      if (link.weekdays.charAt(maskIndex) !== '1') continue;
+      var range = rangeForDay(link, (wd + 6) % 7); // Mon = 0
+      if (!range) continue;
       var date = jstDateString(day);
-      for (var t = day + link.dayStart * MIN; t + step <= day + link.dayEnd * MIN; t += step) {
+      for (var t = day + range.start * MIN; t + step <= day + range.end * MIN; t += step) {
         out.push({ start: t, end: t + step, date: date });
       }
     }
@@ -122,6 +129,7 @@ var Slots = (function () {
     jstDateString: jstDateString,
     hhmm: hhmm,
     formatRange: formatRange,
+    rangeForDay: rangeForDay,
     generateSlots: generateSlots,
     classify: classify,
     mergeRanges: mergeRanges,

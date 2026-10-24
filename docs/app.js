@@ -88,7 +88,12 @@
       var dt = new Date(Slots.jstMidnight(d) + Slots.JST_OFFSET_MS);
       return '<div class="gh">' + dt.getUTCDate() + '<small>' + WD[dt.getUTCDay()] + '</small></div>';
     }).join('');
-    for (var m = l.dayStart; m + l.slotMinutes <= l.dayEnd; m += l.slotMinutes) {
+    // Rows = every time of day that has a slot (days may have different ranges).
+    var seen = {};
+    data.slots.forEach(function (x) { seen[Math.round((x.s - Slots.jstMidnight(Slots.jstDateString(x.s))) / 60000)] = 1; });
+    var rows = Object.keys(seen).map(Number).sort(function (a, b) { return a - b; });
+    rows.forEach(function (m, i) {
+      if (i && m - rows[i - 1] > l.slotMinutes) h += '<div class="gap" style="grid-column:1/-1"></div>';
       h += '<div class="gt">' + (m % 60 === 0 ? Math.floor(m / 60) + ':00' : '') + '</div>';
       days.forEach(function (d) {
         var s = Slots.jstMidnight(d) + m * 60000;
@@ -96,7 +101,7 @@
         if (!y) { h += '<div></div>'; return; }
         h += '<div class="c y-' + y + (y === '×' ? ' x' : '') + (selected[s] ? ' sel' : '') + '" data-s="' + s + '">' + y + '</div>';
       });
-    }
+    });
     g.innerHTML = h;
   }
 

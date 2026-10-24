@@ -87,6 +87,19 @@ function adminGetCalendarData(fromDate, toDate, force) {
   return out;
 }
 
+// Per-weekday ranges (Mon..Sun, null = hidden) or null for the simple setting.
+function normalizeDayRanges_(v) {
+  if (!Array.isArray(v) || v.length !== 7) return null;
+  var out = v.map(function (r, i) {
+    if (!r) return null;
+    var s = Number(r.start), e = Number(r.end);
+    if (!(s >= 0 && e <= 1440 && s < e)) throw new Error('「' + '月火水木金土日'[i] + '」の時間帯が正しくありません');
+    return { start: s, end: e };
+  });
+  if (!out.some(function (r) { return r; })) throw new Error('見せる曜日を1つ以上選んでください');
+  return out;
+}
+
 function normalizeLink_(d) {
   var link = {
     id: d.id || '',
@@ -108,6 +121,14 @@ function normalizeLink_(d) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(link.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(link.endDate)) throw new Error('期間が正しくありません');
   var days = (Slots.jstMidnight(link.endDate) - Slots.jstMidnight(link.startDate)) / DAY_MS;
   if (days < 0 || days >= LIMITS.maxPeriodDays) throw new Error('期間は 1〜' + LIMITS.maxPeriodDays + ' 日にしてください');
+  link.dayRanges = normalizeDayRanges_(d.dayRanges);
+  if (link.dayRanges) {
+    // keep the simple fields consistent: overall span and shown weekdays
+    var shown = link.dayRanges.filter(function (r) { return r; });
+    link.dayStart = Math.min.apply(null, shown.map(function (r) { return r.start; }));
+    link.dayEnd = Math.max.apply(null, shown.map(function (r) { return r.end; }));
+    link.weekdays = link.dayRanges.map(function (r) { return r ? '1' : '0'; }).join('');
+  }
   if (!(link.dayStart >= 0 && link.dayEnd <= 1440 && link.dayStart < link.dayEnd)) throw new Error('時間帯が正しくありません');
   var ok = { '◎': 1, '○': 1, '△': 1, '×': 1 };
   Object.keys(d.overrides || {}).forEach(function (k) {
