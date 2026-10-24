@@ -230,13 +230,13 @@ function adminReply(requestId, type, text) {
     if (!mine.length) throw new Error('申請が見つかりません');
     if (type === 'reject') {
       mine.forEach(function (r) {
-        if (r.status === 'pending') updateRequestRow_(r._row, { status: 'rejected', decidedAt: Date.now() });
+        if (r.status === 'pending') { updateRequestRow_(r._row, { status: 'rejected', decidedAt: Date.now() }); r.status = 'rejected'; }
       });
       bumpVersion_();
     }
     return mine;
   });
-  mailReply_(rows[0], type === 'reject' ? 'reject' : 'modify', text);
+  mailReply_(rows, type === 'reject' ? 'reject' : 'modify', text);
   return true;
 }
 

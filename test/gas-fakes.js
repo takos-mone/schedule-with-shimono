@@ -79,6 +79,11 @@ function makeEnv({ owner = 'owner@example.com', active = owner, calendars = [], 
       computeDigest: (_a, s) => [...crypto.createHash('sha256').update(String(s)).digest()],
       base64EncodeWebSafe: (b) => Buffer.from(b).toString('base64url'),
       getUuid: () => crypto.randomUUID(),
+      formatDate: (d, _tz, _fmt) => {
+        const j = new Date(d.getTime() + 9 * 3600e3);
+        const p = (n) => String(n).padStart(2, '0');
+        return `${j.getUTCFullYear()}/${p(j.getUTCMonth() + 1)}/${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
+      },
     },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (s) => ({ body: s, setMimeType() { return this; } }) },
     HtmlService: {

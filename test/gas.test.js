@@ -165,6 +165,9 @@ test('reject marks pending ranges and mails the guest; approve with adjusted tim
   st = env.ctx.adminGetState();
   assert.equal(JSON.stringify(st.requests[0].ranges.map((x) => x.status)), '["approved","rejected"]');
   assert.match(env.sent.at(-1).htmlBody, /ごめんなさい/);
+  assert.match(env.sent.at(-1).htmlBody, /お申し込みいただいた内容/);
+  assert.match(env.sent.at(-1).htmlBody, /確定/);
+  assert.match(env.sent.at(-1).htmlBody, /お受けできません/);
 });
 
 test('calendar data for the editor has details, pending holds, and is cached', () => {
@@ -214,6 +217,11 @@ test('one email approve link approves every range; notes travel to mail and even
   assert.match(env.created[0].opt.description, /備考・コメント:\n駅前で/);
   const confirms = env.sent.filter((m) => /日程確定/.test(m.subject));
   assert.equal(confirms.length, 1);
+  assert.match(confirms[0].subject, /10\/26\(月\) 17:00–18:00 ほか1件/);
+  assert.match(confirms[0].subject, /（数学）/);
+  assert.match(confirms[0].htmlBody, /ご用件/);
+  assert.match(confirms[0].htmlBody, /駅前で/);
+  assert.match(confirms[0].htmlBody, /1時間/);
   assert.match(confirms[0].htmlBody, /10\/26/);
   assert.match(confirms[0].htmlBody, /10\/29/);
   assert.match(env.ctx.doGet({ parameter: { action: 'approve', req } }).html, /処理済み/);
