@@ -25,7 +25,7 @@ function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.action === 'availability') return json_(publicAvailability_(p.l));
   if (!isOwner_()) return notFound_();
-  if (p.action === 'approve') return approvePage_(p.id);
+  if (p.action === 'approve') return approvePage_(p.req, p.id);
   return adminPage_(p.action === 'reply' ? { mode: 'reply', req: p.req || '', type: p.type || '' } : { mode: 'home' });
 }
 
@@ -82,6 +82,7 @@ function submitRequest_(body) {
   var name = str_(body.name, 50);
   var email = str_(body.email, 100);
   var message = str_(body.message, 500);
+  var note = str_(body.note, 1000);
   var ranges = Array.isArray(body.ranges) ? body.ranges : [];
   if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: 'invalid' };
   if (!ranges.length || ranges.length > LIMITS.maxRanges) return { ok: false, error: 'invalid' };
@@ -107,7 +108,7 @@ function submitRequest_(body) {
     var now = Date.now();
     var rows = ranges.map(function (r) {
       return { id: newId_(16), requestId: requestId, linkId: link.id, start: r.start, end: r.end,
-        createdAt: now, name: name, email: email, message: message };
+        createdAt: now, name: name, email: email, message: message, note: note };
     });
     appendRequestRows_(rows);
     bumpVersion_();

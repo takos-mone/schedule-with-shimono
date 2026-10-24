@@ -193,7 +193,8 @@ function renderLinks() {
 function renderRequest(r) {
   var h = '<div class="req" data-req="' + r.requestId + '"><div class="row"><b>' + esc(r.name) + '</b><span class="muted">' + esc(r.email) + '</span><span class="sp"></span>'
     + '<span class="muted">' + new Date(r.createdAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) + '</span></div>';
-  if (r.message) h += '<div style="margin:4px 0;white-space:pre-wrap">' + esc(r.message) + '</div>';
+  if (r.message) h += '<div style="margin:4px 0;white-space:pre-wrap"><span class="muted">ご用件：</span>' + esc(r.message) + '</div>';
+  if (r.note) h += '<div style="margin:4px 0;white-space:pre-wrap"><span class="muted">備考・コメント：</span>' + esc(r.note) + '</div>';
   r.ranges.forEach(function (x) {
     var st = x.status === 'pending' ? '' : x.status === 'approved' ? '<span class="badge b-ok">承認済み</span>' : '<span class="badge b-rej">却下</span>';
     h += '<div class="range" data-range="' + x.id + '"><b>' + esc(x.label) + '</b>' + st;
@@ -205,7 +206,9 @@ function renderRequest(r) {
     h += '</div>';
   });
   var anyPending = r.ranges.some(function (x) { return x.status === 'pending'; });
-  h += '<div class="row" style="margin-top:6px"><button class="btn warn" data-act="modify">修正を提案</button>'
+  var pendingCount = r.ranges.filter(function (x) { return x.status === 'pending'; }).length;
+  h += '<div class="row" style="margin-top:6px">' + (pendingCount > 1 ? '<button class="btn go" data-act="approve-all">すべて承認</button>' : '')
+    + '<button class="btn warn" data-act="modify">修正を提案</button>'
     + (anyPending ? '<button class="btn no" data-act="reject">却下</button>' : '') + '</div>'
     + '<div class="replybox hidden"></div></div>';
   return h;
@@ -245,6 +248,14 @@ $('tab-links').onclick = function (e) {
     call('adminApprove', x.id, s, en).then(function (res) {
       toast(res.ok ? (res.already ? 'すでに処理済みです' : '承認しました：' + res.label) : res.error);
       calData = null; // approvals change the calendar
+      return load();
+    });
+  }
+  if (act === 'approve-all') {
+    busy(b, true);
+    call('adminApproveRequest', reqEl.dataset.req).then(function (res) {
+      toast(res.ok ? (res.already ? 'すでに処理済みです' : '承認しました：' + res.label) : res.error);
+      calData = null;
       return load();
     });
   }

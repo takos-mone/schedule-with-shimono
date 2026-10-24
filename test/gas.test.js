@@ -88,13 +88,13 @@ test('request flow: submit, pending shows △ on other links, approve creates ev
   assert.deepEqual(res, { ok: true });
   assert.equal(env.sent.length, 1);
   assert.equal(env.sent[0].to, 'owner@example.com');
-  assert.match(env.sent[0].htmlBody, /action=approve&amp;id=/);
+  assert.match(env.sent[0].htmlBody, /action=approve&amp;req=/);
   assert.equal(sym(get(env, { action: 'availability', l: other.id }), r.start), '△');
 
   env.setActive('owner@example.com');
   const st = env.ctx.adminGetState();
   const rangeId = st.requests[0].ranges[0].id;
-  const page = env.ctx.doGet({ parameter: { action: 'approve', id: rangeId } });
+  const page = env.ctx.doGet({ parameter: { action: 'approve', id: rangeId } }); // legacy per-range link
   assert.match(page.html, /承認しました/);
   assert.equal(env.created.length, 1);
   assert.equal(env.created[0].title, '山田：数学');
@@ -194,4 +194,30 @@ test('15-minute slots are accepted and served to guests', () => {
   env.setActive('');
   const r = { start: jst('2026-10-26', '17:15'), end: jst('2026-10-26', '17:45') };
   assert.equal(post(env, { action: 'request', l: link.id, name: 'a', email: 'a@b.co', ranges: [r] }).ok, true);
+});
+
+test('one email approve link approves every range; notes travel to mail and event', () => {
+  const env = setupEnv();
+  const link = newLink(env);
+  env.setActive('');
+  const a = { start: jst('2026-10-26', '17:00'), end: jst('2026-10-26', '18:00') };
+  const b = { start: jst('2026-10-29', '19:00'), end: jst('2026-10-29', '20:00') };
+  post(env, { action: 'request', l: link.id, name: '山田', email: 'y@example.com', message: '数学', note: '駅前で', ranges: [a, b] });
+  const owner = env.sent[0];
+  assert.equal((owner.htmlBody.match(/action=approve/g) || []).length, 1);
+  assert.match(owner.htmlBody, /すべて承認/);
+  assert.match(owner.htmlBody, /駅前で/);
+  const req = owner.htmlBody.match(/action=approve&amp;req=([A-Za-z0-9_-]+)/)[1];
+  env.setActive('owner@example.com');
+  assert.match(env.ctx.doGet({ parameter: { action: 'approve', req } }).html, /承認しました/);
+  assert.equal(env.created.length, 2);
+  assert.match(env.created[0].opt.description, /備考・コメント:\n駅前で/);
+  const confirms = env.sent.filter((m) => /日程確定/.test(m.subject));
+  assert.equal(confirms.length, 1);
+  assert.match(confirms[0].htmlBody, /10\/26/);
+  assert.match(confirms[0].htmlBody, /10\/29/);
+  assert.match(env.ctx.doGet({ parameter: { action: 'approve', req } }).html, /処理済み/);
+  assert.equal(env.created.length, 2);
+  const st = env.ctx.adminGetState();
+  assert.equal(st.requests[0].note, '駅前で');
 });

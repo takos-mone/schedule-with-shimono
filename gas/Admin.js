@@ -10,15 +10,17 @@ function adminPage_(params) {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-function approvePage_(rangeId) {
+// Email approve link: ?action=approve&req=<requestId> approves every pending range of the request.
+// The older per-range form (&id=<rangeId>) still works for mails sent before this change.
+function approvePage_(requestId, rangeId) {
   var res;
   try {
-    res = approveRange_(rangeId, null, null);
+    res = requestId ? approveRequest_(requestId) : approveRange_(rangeId, null, null);
   } catch (err) {
     res = { ok: false, error: String(err.message || err) };
   }
   var msg = !res.ok ? '承認できませんでした：' + res.error
-    : res.already ? 'この枠はすでに処理済みです（' + res.status + '）。'
+    : res.already ? 'この申請はすでに処理済みです（' + res.status + '）。'
     : '承認しました：' + res.label + '　カレンダーに登録し、相手に確定メールを送りました。';
   return HtmlService.createHtmlOutput(
     '<div style="font-family:sans-serif;padding:24px"><p style="font-size:16px">' + esc_(msg) + '</p>'
@@ -35,7 +37,7 @@ function adminGetState() {
   var byReq = {};
   requests.forEach(function (r) {
     var g = byReq[r.requestId] || (byReq[r.requestId] = {
-      requestId: r.requestId, linkId: r.linkId, name: r.name, email: r.email, message: r.message,
+      requestId: r.requestId, linkId: r.linkId, name: r.name, email: r.email, message: r.message, note: r.note,
       createdAt: r.createdAt, ranges: [],
     });
     g.ranges.push({ id: r.id, start: r.start, end: r.end, status: r.status, label: Slots.formatRange(r) });
@@ -153,29 +155,68 @@ function adminApprove(rangeId, start, end) {
   return approveRange_(rangeId, start, end);
 }
 
+function bookingCalendar_() {
+  var cal = CalendarApp.getCalendarById(getSetting_('bookingCalendarId', ''));
+  if (!cal) throw new Error('「日程調整」カレンダーがありません。setup() を実行してください');
+  return cal;
+}
+
+// Creates the calendar event for one pending range and marks it approved. Call inside withLock_.
+function bookRange_(cal, r) {
+  var title = r.name + (r.message ? '：' + r.message.split('\n')[0].slice(0, 40) : '');
+  var ev = cal.createEvent(title, new Date(r.start), new Date(r.end), {
+    description: '申請者: ' + r.name + ' <' + r.email + '>'
+      + (r.message ? '\n\nご用件:\n' + r.message : '') + (r.note ? '\n\n備考・コメント:\n' + r.note : ''),
+  });
+  updateRequestRow_(r._row, { status: 'approved', eventId: ev.getId(), decidedAt: Date.now(), start: r.start, end: r.end });
+}
+
+function statusLabel_(rows) {
+  return rows.every(function (r) { return r.status === 'approved'; }) ? '承認済み'
+    : rows.every(function (r) { return r.status === 'rejected'; }) ? '却下済み' : '処理済み';
+}
+
+// Admin page: approve one range, optionally with adjusted times.
 function approveRange_(rangeId, start, end) {
   assertOwner_();
   var res = withLock_(function () {
     var r = getRequests_().filter(function (x) { return x.id === rangeId; })[0];
     if (!r) return { ok: false, error: '申請が見つかりません' };
-    if (r.status !== 'pending') return { ok: true, already: true, status: r.status === 'approved' ? '承認済み' : '却下済み' };
+    if (r.status !== 'pending') return { ok: true, already: true, status: statusLabel_([r]) };
     if (start != null && end != null) {
       start = Number(start); end = Number(end);
       if (!(start < end)) return { ok: false, error: '時刻が正しくありません' };
       r.start = start; r.end = end;
     }
-    var cal = CalendarApp.getCalendarById(getSetting_('bookingCalendarId', ''));
-    if (!cal) return { ok: false, error: '「日程調整」カレンダーがありません。setup() を実行してください' };
-    var title = r.name + (r.message ? '：' + r.message.split('\n')[0].slice(0, 40) : '');
-    var ev = cal.createEvent(title, new Date(r.start), new Date(r.end), {
-      description: '申請者: ' + r.name + ' <' + r.email + '>\n\n' + r.message,
-    });
-    updateRequestRow_(r._row, { status: 'approved', eventId: ev.getId(), decidedAt: Date.now(), start: r.start, end: r.end });
+    bookRange_(bookingCalendar_(), r);
     bumpVersion_();
-    return { ok: true, row: r, label: Slots.formatRange(r) };
+    return { ok: true, rows: [r], label: Slots.formatRange(r) };
   });
-  if (res.ok && !res.already) mailConfirmed_(res.row);
-  if (res.row) delete res.row;
+  if (res.ok && !res.already) mailConfirmed_(res.rows);
+  delete res.rows;
+  return res;
+}
+
+// Email / admin "approve all": approve every pending range of a request with one confirmation mail.
+function adminApproveRequest(requestId) {
+  assertOwner_();
+  return approveRequest_(requestId);
+}
+
+function approveRequest_(requestId) {
+  assertOwner_();
+  var res = withLock_(function () {
+    var mine = getRequests_().filter(function (x) { return x.requestId === requestId; });
+    if (!mine.length) return { ok: false, error: '申請が見つかりません' };
+    var pending = mine.filter(function (r) { return r.status === 'pending'; });
+    if (!pending.length) return { ok: true, already: true, status: statusLabel_(mine) };
+    var cal = bookingCalendar_();
+    pending.forEach(function (r) { bookRange_(cal, r); });
+    bumpVersion_();
+    return { ok: true, rows: pending, label: pending.map(function (r) { return Slots.formatRange(r); }).join('、') };
+  });
+  if (res.ok && !res.already) mailConfirmed_(res.rows);
+  delete res.rows;
   return res;
 }
 

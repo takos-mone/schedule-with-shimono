@@ -168,7 +168,7 @@
     btn.disabled = true;
     btn.textContent = '送信中…';
     var body = JSON.stringify({
-      action: 'request', l: linkId, name: f.elements.name.value, email: f.elements.email.value, message: f.elements.message.value,
+      action: 'request', l: linkId, name: f.elements.name.value, email: f.elements.email.value, message: f.elements.message.value, note: f.elements.note.value,
       ranges: rs, hp: f.elements.website.value,
     });
     // text/plain avoids a CORS preflight, which Apps Script cannot answer.

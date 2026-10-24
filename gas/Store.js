@@ -116,6 +116,7 @@ function getRequests_() {
       name: data.name || '',
       email: data.email || '',
       message: data.message || '',
+      note: data.note || '',
     };
   });
 }
@@ -124,7 +125,7 @@ function appendRequestRows_(rows) {
   var sh = sheet_(SHEET.requests);
   var values = rows.map(function (r) {
     return [r.id, r.requestId, r.linkId, r.start, r.end, 'pending', '', r.createdAt, '',
-      JSON.stringify({ name: r.name, email: r.email, message: r.message })];
+      JSON.stringify({ name: r.name, email: r.email, message: r.message, note: r.note || '' })];
   });
   sh.getRange(sh.getLastRow() + 1, 1, values.length, values[0].length).setValues(values);
 }
