@@ -46,6 +46,7 @@ function makeEnv({ owner = 'owner@example.com', active = owner, calendars = [], 
   const calObjs = calendars.map((c) => ({
     getId: () => c.id,
     getName: () => c.name,
+    isOwnedByMe: () => !/holiday|someone/.test(c.id),
     getEvents: (from, to) => (c.events || [])
       .filter((e) => e.start < to.getTime() && from.getTime() < e.end)
       .map((e) => ({
@@ -55,7 +56,7 @@ function makeEnv({ owner = 'owner@example.com', active = owner, calendars = [], 
         getAllDayStartDate: () => new Date(e.start), getAllDayEndDate: () => new Date(e.end),
         getTitle: () => e.title || '', getLocation: () => '', getDescription: () => '',
       })),
-    createEvent: (title, s, e, opt) => { created.push({ title, start: s.getTime(), end: e.getTime(), opt }); return { getId: () => 'ev' + created.length }; },
+    createEvent: (title, s, e, opt) => { created.push({ title, start: s.getTime(), end: e.getTime(), opt, cal: c.id }); return { getId: () => 'ev' + created.length }; },
   }));
   const ctx = {
     console,
@@ -72,7 +73,7 @@ function makeEnv({ owner = 'owner@example.com', active = owner, calendars = [], 
       getCalendarById: (id) => calObjs.find((c) => c.getId() === id) || null,
       getOwnedCalendarsByName: (n) => calObjs.filter((c) => c.getName() === n),
       getDefaultCalendar: () => calObjs[0],
-      createCalendar: (n) => { const c = { id: 'booking@group.calendar.google.com', name: n, events: [] }; calendars.push(c); const o = { ...calObjs[0], getId: () => c.id, getName: () => n }; calObjs.push(o); return o; },
+      createCalendar: (n) => { const c = { id: 'booking@group.calendar.google.com', name: n, events: [] }; calendars.push(c); const o = { ...calObjs[0], getId: () => c.id, getName: () => n, createEvent: (title, s, e, opt) => { created.push({ title, start: s.getTime(), end: e.getTime(), opt, cal: c.id }); return { getId: () => 'ev' + created.length }; } }; calObjs.push(o); return o; },
     },
     Utilities: {
       DigestAlgorithm: { SHA_256: 'sha256' },

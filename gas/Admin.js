@@ -55,7 +55,10 @@ function adminGetState() {
 
 function adminListCalendars() {
   assertOwner_();
-  return CalendarApp.getAllCalendars().map(function (c) { return { id: c.getId(), name: c.getName() }; });
+  var booking = getSetting_('bookingCalendarId', '');
+  return CalendarApp.getAllCalendars().map(function (c) {
+    return { id: c.getId(), name: c.getName(), owned: c.isOwnedByMe(), booking: c.getId() === booking };
+  });
 }
 
 // Events (with details) and pending holds for [fromDate, toDate], used by the
@@ -97,6 +100,8 @@ function normalizeLink_(d) {
     overrides: {},
     active: d.active !== false,
     archived: !!d.archived,
+    targetCalendarId: typeof d.targetCalendarId === 'string' ? d.targetCalendarId : '', // '' = 「日程調整」
+    targetCalendarName: String(d.targetCalendarName || '').slice(0, 100),
     archivedAt: d.archivedAt || 0,
     createdAt: d.createdAt || Date.now(),
   };
@@ -172,7 +177,11 @@ function adminApprove(rangeId, start, end) {
   return approveRange_(rangeId, start, end);
 }
 
-function bookingCalendar_() {
+// Calendar that approved events go to: the link's choice, else 「日程調整」.
+function bookingCalendar_(linkId) {
+  var link = getLink_(linkId);
+  var chosen = link && link.targetCalendarId ? CalendarApp.getCalendarById(link.targetCalendarId) : null;
+  if (chosen) return chosen;
   var cal = CalendarApp.getCalendarById(getSetting_('bookingCalendarId', ''));
   if (!cal) throw new Error('「日程調整」カレンダーがありません。setup() を実行してください');
   return cal;
@@ -205,7 +214,7 @@ function approveRange_(rangeId, start, end) {
       if (!(start < end)) return { ok: false, error: '時刻が正しくありません' };
       r.start = start; r.end = end;
     }
-    bookRange_(bookingCalendar_(), r);
+    bookRange_(bookingCalendar_(r.linkId), r);
     bumpVersion_();
     return { ok: true, rows: [r], label: Slots.formatRange(r) };
   });
@@ -227,7 +236,7 @@ function approveRequest_(requestId) {
     if (!mine.length) return { ok: false, error: '申請が見つかりません' };
     var pending = mine.filter(function (r) { return r.status === 'pending'; });
     if (!pending.length) return { ok: true, already: true, status: statusLabel_(mine) };
-    var cal = bookingCalendar_();
+    var cal = bookingCalendar_(pending[0].linkId);
     pending.forEach(function (r) { bookRange_(cal, r); });
     bumpVersion_();
     return { ok: true, rows: pending, label: pending.map(function (r) { return Slots.formatRange(r); }).join('、') };

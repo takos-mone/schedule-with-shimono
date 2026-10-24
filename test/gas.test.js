@@ -246,3 +246,19 @@ test('completing a link closes it for guests; restoring reopens it', () => {
   assert.equal(l.archived, false);
   assert.equal(get(env, { action: 'availability', l: link.id }).ok, true);
 });
+
+test('approved events go to the calendar chosen on the link', () => {
+  const env = setupEnv();
+  const toBaito = newLink(env, { targetCalendarId: 'baito@group.calendar.google.com' });
+  const toDefault = newLink(env, { name: 'other' });
+  env.setActive('');
+  post(env, { action: 'request', l: toBaito.id, name: 'a', email: 'a@b.co', ranges: [{ start: jst('2026-10-26', '17:00'), end: jst('2026-10-26', '18:00') }] });
+  post(env, { action: 'request', l: toDefault.id, name: 'b', email: 'b@b.co', ranges: [{ start: jst('2026-10-29', '17:00'), end: jst('2026-10-29', '18:00') }] });
+  env.setActive('owner@example.com');
+  env.ctx.adminGetState().requests.forEach((r) => env.ctx.adminApproveRequest(r.requestId));
+  const byTitle = Object.fromEntries(env.created.map((e) => [e.title, e.cal]));
+  assert.equal(byTitle.a, 'baito@group.calendar.google.com');
+  assert.equal(byTitle.b, 'booking@group.calendar.google.com');
+  const cals = env.ctx.adminListCalendars();
+  assert.equal(cals.find((c) => c.id === 'someone@gmail.com').owned, false);
+});

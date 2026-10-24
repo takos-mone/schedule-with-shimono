@@ -200,7 +200,7 @@ function renderLinks() {
       + '<button class="btn" data-act="toggle">' + (l.active ? '停止' : '再開') + '</button>'
       + '<button class="btn dark" data-act="archive">完了にする</button></div>'
       + '<div class="muted" style="margin-top:4px">' + l.startDate + ' 〜 ' + l.endDate + '　' + minToHHMM(l.dayStart) + '–' + minToHHMM(l.dayEnd)
-      + '　' + WD.filter(function (_, i) { return l.weekdays[i] === '1'; }).join('') + '　' + l.slotMinutes + '分単位</div>'
+      + '　' + WD.filter(function (_, i) { return l.weekdays[i] === '1'; }).join('') + '　' + l.slotMinutes + '分単位　追加先：' + esc(l.targetCalendarName || '日程調整') + '</div>'
       + '<input class="url" readonly value="' + esc(guestUrl(l)) + '">';
     reqs.forEach(function (r) { h += renderRequest(r); });
     h += '</div>';
@@ -360,7 +360,9 @@ function renderEditor() {
     + '<label class="f">相手に見せる時間帯<div class="row"><select id="f-ds">' + timeOptions(d.dayStart) + '</select>〜<select id="f-de">' + timeOptions(d.dayEnd) + '</select></div></label>'
     + '<label class="f">曜日<div class="days" id="f-wd">' + WD.map(function (w, i) { return '<span data-i="' + i + '" class="' + (d.weekdays[i] === '1' ? 'on' : '') + '">' + w + '</span>'; }).join('') + '</div></label>'
     + '<label class="f">相手が選べる枠の長さ<select id="f-slot"><option value="15"' + (d.slotMinutes === 15 ? ' selected' : '') + '>15分</option><option value="30"' + (d.slotMinutes === 30 ? ' selected' : '') + '>30分</option><option value="60"' + (d.slotMinutes === 60 ? ' selected' : '') + '>1時間</option></select></label>'
-    + '<h3 style="margin:16px 0 4px">3. 手で上書き</h3>'
+    + '<h3 style="margin:16px 0 4px">3. 承認した予定の追加先</h3>'
+    + '<label class="f">マイカレンダー<select id="f-target" style="width:100%"><option value="">「日程調整」カレンダー（既定）</option></select></label>'
+    + '<h3 style="margin:16px 0 4px">4. 手で上書き</h3>'
     + '<div class="brushes" id="brushes">'
     + brushButton('info', '🔍 予定を見る')
     + brushButton('×', '× ブロック', 'b-×')
@@ -380,7 +382,21 @@ function renderEditor() {
     + '<div class="muted" id="loaded-at" style="margin-top:4px"></div></div></div>';
   $('tab-edit').innerHTML = h;
   bindEditor();
+  fillTargetSelect();
   ensureData(false).then(recompute);
+}
+
+// Owned calendars (except 「日程調整」, which is the default option) for the approval target.
+function fillTargetSelect() {
+  if (!S.calendars) { call('adminListCalendars').then(function (c) { S.calendars = c; fillTargetSelect(); }); return; }
+  var sel = $('f-target'); if (!sel) return;
+  var h = '<option value="">「日程調整」カレンダー（既定）</option>';
+  S.calendars.filter(function (c) { return c.owned && !c.booking; }).forEach(function (c) {
+    h += '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>';
+  });
+  sel.innerHTML = h;
+  sel.value = draft.targetCalendarId || '';
+  if (sel.value !== (draft.targetCalendarId || '')) sel.value = ''; // chosen calendar no longer exists
 }
 
 function readForm() {
@@ -390,6 +406,9 @@ function readForm() {
   draft.dayStart = Number($('f-ds').value);
   draft.dayEnd = Number($('f-de').value);
   draft.slotMinutes = Number($('f-slot').value);
+  var t = $('f-target');
+  draft.targetCalendarId = t.value;
+  draft.targetCalendarName = t.value ? t.options[t.selectedIndex].text : '';
 }
 
 // Calendar data is loaded once for a wide window and reused; symbols are computed here in the browser.
